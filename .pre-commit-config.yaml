@@ -1,0 +1,27 @@
+repos:
+-   repo: local
+    hooks:
+      -   id: unittest
+          name: unittest
+          entry: scripts/run_unittests.sh
+          language: script
+          pass_filenames: true
+-   repo: https://github.com/PyCQA/isort
+    rev: 5.7.0
+    hooks:
+    -    id: isort
+-   repo: https://github.com/psf/black
+    rev: 20.8b1
+    hooks:
+    -    id: black
+         language_version: python3.8
+-   repo: https://gitlab.com/pycqa/flake8.git
+    rev: 3.8.4
+    hooks:
+    -    id: flake8
+         language_version: python3.8
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.790
+    hooks:
+    -    id: mypy
+         language_version: python3.8
