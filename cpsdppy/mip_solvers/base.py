@@ -26,7 +26,7 @@ class BaseSolverInterface:
             index = np.nonzero(index)[0]
         self._remove_variables_impl(index)
         for lst in self.variable_index_lists:
-            indexremove.remove(lst, index)
+            indexremove.remove(lst.ravel(), index.ravel())
 
     def remove_linear_constraints(self, index):
         index = np.asarray(index)
@@ -35,7 +35,7 @@ class BaseSolverInterface:
             index = np.nonzero(index)[0]
         self._remove_linear_constraints_impl(index)
         for lst in self.linear_constraint_index_lists:
-            indexremove.remove(lst, index)
+            indexremove.remove(lst.ravel(), index.ravel())
 
     def remove_quadratic_constraints(self, index):
         index = np.asarray(index)
@@ -44,7 +44,7 @@ class BaseSolverInterface:
             index = np.nonzero(index)[0]
         self._remove_quadratic_constraints_impl(index)
         for lst in self.quadratic_constraint_index_lists:
-            indexremove.remove(lst, index)
+            indexremove.remove(lst.ravel(), index.ravel())
 
     def solve(self):
         """Solve the problem and call hooks"""
