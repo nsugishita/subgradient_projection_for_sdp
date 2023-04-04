@@ -102,6 +102,9 @@ class GurobiInterface(base.BaseSolverInterface):
         """
         return self.model.NumVars
 
+    def write(self, file_name):
+        self.model.write(file_name)
+
     def add_variables(
         self,
         shape=None,
@@ -138,7 +141,8 @@ class GurobiInterface(base.BaseSolverInterface):
         return np.arange(n, n + lb.size).reshape(lb.shape)
 
     def _remove_variables_impl(self, index):
-        self.model.remove(np.array(self.model.getVars())[index])
+        index = np.atleast_1d(index)
+        self.model.remove(np.array(self.model.getVars())[index].tolist())
         self.model.update()
 
     def add_2x2_psd_variables(
