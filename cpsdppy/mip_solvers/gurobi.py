@@ -3,6 +3,7 @@
 """Gurobi Interface"""
 
 import enum
+import tempfile
 import typing
 
 import gurobipy  # type: ignore
@@ -45,10 +46,13 @@ class GurobiInterface(base.BaseSolverInterface):
 
     env = gurobipy.Env(params={"LogToConsole": False})
 
-    def __init__(self, config=None) -> None:
+    def __init__(self, config=None, model=None) -> None:
         """Initialise a GurobiInterface instance"""
         super().__init__(config)
-        self.model = gurobipy.Model(env=self.env)
+        if model is not None:
+            self.model = model
+        else:
+            self.model = gurobipy.Model(env=self.env)
         self.set_threads(1)
 
     def set_threads(self, v) -> None:
@@ -104,6 +108,93 @@ class GurobiInterface(base.BaseSolverInterface):
 
     def write(self, file_name):
         self.model.write(file_name)
+
+    def write_string(self, format="lp"):
+        r"""Create a string containing problem data
+
+        Examples
+        --------
+        >>> m = GurobiInterface()
+        >>> m.add_variables(obj=[1, 2, 3])
+        array([0, 1, 2])
+        >>> print(m.write_string())
+        \ LP format - ...
+        Minimize
+          C0 + 2 C1 + 3 C2
+        Subject To
+        Bounds
+        End
+
+        Returns
+        -------
+        res : str
+        """
+        if format not in ["lp", "mip", "sav"]:
+            raise ValueError(f"unknown format '{format}'")
+        f = tempfile.NamedTemporaryFile(
+            mode="w+", encoding="latin-1", suffix=f".{format}"
+        )
+        with f:
+            self.write(f.name)
+            f.seek(0)
+            ret = f.read()
+        if ret.endswith("\n"):
+            ret = ret[:-1]
+        return ret
+
+    def print(self, format="lp"):
+        r"""Print problem to the console
+
+        Examples
+        --------
+        >>> m = GurobiInterface()
+        >>> m.add_variables(obj=[1, 2, 3])
+        array([0, 1, 2])
+        >>> m.print()
+        \ LP format - ...
+        Minimize
+          C0 + 2 C1 + 3 C2
+        Subject To
+        Bounds
+        End
+        """
+        print(self.write_string(format=format))
+
+    @classmethod
+    def read(cls, file_path, config={}):
+        """Read an MPS, LP or SAV file
+
+        Parameters
+        ----------
+        file_path : str
+        """
+        m = gurobipy.read(file_path, env=GurobiInterface.env)
+        return GurobiInterface(config=config, model=m)
+
+    @classmethod
+    def read_string(cls, text, format="lp"):
+        r"""Read problem data from a given text
+
+        Examples
+        --------
+        >>> text = '''
+        ... Minimize
+        ... x1 + 2 x2 + 3 x3
+        ... Subject To
+        ... Bounds
+        ... End
+        ... '''
+        >>> m = GurobiInterface.read_string(text)
+        >>> m.get_n_variables()
+        3
+        """
+        if format not in ["lp", "mip", "sav"]:
+            raise ValueError(f"unknown format '{format}'")
+
+        with tempfile.NamedTemporaryFile("w", suffix=f".{format}") as f:
+            f.write(text)
+            f.flush()
+            return cls.read(f.name)
 
     def add_variables(
         self,
