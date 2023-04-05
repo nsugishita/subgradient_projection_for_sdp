@@ -465,6 +465,13 @@ class GurobiInterface(base.BaseSolverInterface):
             value = coef.ravel()
         self.set_linear_constraint_coefs(zip(row[_row], col, value))
 
+    def get_linear_constraint_coefs(self, index=None) -> np.ndarray:
+        if index is None:
+            index = np.arange(self.get_n_linear_constraints())
+        else:
+            index = np.asarray(index)
+        return self.model.getA()[index]
+
     def get_linear_constraint_sense(self, index=None) -> np.ndarray:
         if index is None:
             constraints = self.model.getConstrs()
