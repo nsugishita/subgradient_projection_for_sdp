@@ -5,6 +5,10 @@
 # verbose regular expressions by Black.  Use [ ] to denote a significant space
 # character.
 
+[tool.isort]
+profile = "black"
+line_length = 79
+
 [tool.black]
 line-length = 79
 target-version = ['py36', 'py37', 'py38']
