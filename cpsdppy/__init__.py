@@ -2,6 +2,7 @@
 
 """Cutting-plane method for SDP"""
 
+from cpsdppy import linalg  # noqa: F401
 from cpsdppy import mip_solver_extensions  # noqa: F401
 from cpsdppy import mip_solvers  # noqa: F401
 

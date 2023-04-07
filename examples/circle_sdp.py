@@ -106,8 +106,11 @@ def sdp_linear_cuts():
     b = np.array([[0, 1], [1, 0]], dtype=float)
     c = np.array([[1, 0], [0, 1]], dtype=float)
 
-    coefs = np.array([a, b])
-    offset = c
+    constr_coefs = np.stack([a, b])
+    constr_svec_coefs = np.stack(
+        [cpsdppy.linalg.svec(a), cpsdppy.linalg.svec(b)]
+    )
+    constr_svec_offset = cpsdppy.linalg.svec(c)
 
     fig, ax = plt.subplots()
     t = np.linspace(0, 2 * np.pi, 100)
@@ -124,16 +127,15 @@ def sdp_linear_cuts():
         linear_cuts.iteration = iteration
         model.solve()
         x = model.get_solution()
-        matrix = np.sum(coefs * x[:, None, None], axis=0) + offset
+        matrix = cpsdppy.linalg.svec_inv(
+            x @ constr_svec_coefs + constr_svec_offset, part="f"
+        )
         w, v = np.linalg.eigh(matrix)
         f = -w[0]
         v_min = v[:, 0]
-        g = -np.array(
-            [
-                v_min @ a @ v_min,
-                v_min @ b @ v_min,
-            ]
-        )
+
+        g = np.sum(constr_coefs * v_min, axis=2)
+        g = -np.sum(g * v_min, axis=1)
 
         _offset = f - g @ x
         linear_cuts.add_linear_cuts(coef=g, offset=_offset)
@@ -180,8 +182,12 @@ def sdp_lmi_cuts():
     b = np.array([[0, 1], [1, 0]], dtype=float)
     c = np.array([[1, 0], [0, 1]], dtype=float)
 
-    coefs = np.array([a, b])
-    offset = c
+    constr_coefs = np.stack([a, b])
+    constr_offset = c
+    constr_svec_coefs = np.stack(
+        [cpsdppy.linalg.svec(a), cpsdppy.linalg.svec(b)]
+    )
+    constr_svec_offset = cpsdppy.linalg.svec(c)
 
     fig, ax = plt.subplots()
     t = np.linspace(0, 2 * np.pi, 100)
@@ -200,20 +206,23 @@ def sdp_lmi_cuts():
         lmi_cuts.iteration = iteration
         model.solve()
         x = model.get_solution()[:2]
-        matrix = np.sum(coefs * x[:, None, None], axis=0) + offset
-        w, v = np.linalg.eigh(matrix)
-        C = np.stack(
-            [
-                [v[:, 0] @ a @ v[:, 0], v[:, 0] @ b @ v[:, 0]],
-                [v[:, 0] @ a @ v[:, 1], v[:, 0] @ b @ v[:, 1]],
-                [v[:, 1] @ a @ v[:, 1], v[:, 1] @ b @ v[:, 1]],
-            ]
+        matrix = cpsdppy.linalg.svec_inv(
+            x @ constr_svec_coefs + constr_svec_offset, part="f"
         )
-        _offset = np.array(
+
+        w, v = np.linalg.eigh(matrix)
+
+        coef_v0 = np.sum(constr_coefs * v[:, 0], axis=2)
+        coef_v1 = np.sum(constr_coefs * v[:, 1], axis=2)
+        coef_v0v0 = -np.sum(coef_v0 * v[:, 0], axis=1)
+        coef_v0v1 = -np.sum(coef_v0 * v[:, 1], axis=1)
+        coef_v1v1 = -np.sum(coef_v1 * v[:, 1], axis=1)
+        cut_coef = -np.stack([coef_v0v0, coef_v0v1, coef_v1v1])
+        cut_offset = np.array(
             [
-                v[:, 0] @ c @ v[:, 0],
-                v[:, 0] @ c @ v[:, 1],
-                v[:, 1] @ c @ v[:, 1],
+                v[:, 0] @ constr_offset @ v[:, 0],
+                v[:, 0] @ constr_offset @ v[:, 1],
+                v[:, 1] @ constr_offset @ v[:, 1],
             ]
         )
 
@@ -235,9 +244,9 @@ def sdp_lmi_cuts():
 
         ax.plot(x[0], x[1], "o", markersize=4, color="C0")
 
-        lmi_cuts.add_lmi_cuts(coef=C, offset=_offset)
-        C_list.append(C)
-        offset_list.append(_offset)
+        lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
+        C_list.append(cut_coef)
+        offset_list.append(cut_offset)
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
