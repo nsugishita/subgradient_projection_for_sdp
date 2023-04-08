@@ -194,12 +194,6 @@ def sdp_linear_cuts():
 def sdp_lmi_cuts():
     objective_coef = np.array([0.0, 1.0])
 
-    model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
-
-    model.add_variables(lb=-2, ub=2, obj=objective_coef)
-
-    lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(model)
-
     a = np.array([[1, 0], [0, -1]], dtype=float)
     b = np.array([[0, 1], [1, 0]], dtype=float)
     c = np.array([[1, 0], [0, 1]], dtype=float)
@@ -239,10 +233,12 @@ def sdp_lmi_cuts():
 
     constr_coefs = np.stack([a, b])
     constr_offset = c
-    constr_svec_coefs = np.stack(
-        [cpsdppy.linalg.svec(a), cpsdppy.linalg.svec(b)], axis=1
-    )
-    constr_svec_offset = cpsdppy.linalg.svec(c)
+
+    result = _sdp_lmi_cuts_impl(objective_coef, constr_coefs, constr_offset)
+    x_list = result["x_list"]
+    lmi_cuts = result["lmi_cuts"]
+    constr_svec_coefs = result["constr_svec_coefs"]
+    constr_svec_offset = result["constr_svec_offset"]
 
     fig, ax = plt.subplots()
     box_color = "lightgray"
@@ -258,59 +254,16 @@ def sdp_lmi_cuts():
         _ax.axvline(-2, lw=1, color=box_color)
         _ax.axvline(2, lw=1, color=box_color)
 
-    n_iterations = 4
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    px = np.linspace(*xlim, 300)
+    py = np.linspace(*ylim, 300)
 
-    for iteration in range(n_iterations):
-        lmi_cuts.iteration = iteration
-        model.solve()
-        x = model.get_solution()[:2]
-        matrix = cpsdppy.linalg.svec_inv(
-            constr_svec_coefs @ x + constr_svec_offset, part="f"
-        )
-
-        w, v = np.linalg.eigh(matrix)
-
-        coef_v0 = np.sum(constr_coefs * v[:, 0], axis=2)
-        coef_v1 = np.sum(constr_coefs * v[:, 1], axis=2)
-        coef_v0v0 = -np.sum(coef_v0 * v[:, 0], axis=1)
-        coef_v0v1 = -np.sum(coef_v0 * v[:, 1], axis=1)
-        coef_v1v1 = -np.sum(coef_v1 * v[:, 1], axis=1)
-        cut_coef = -np.stack([coef_v0v0, coef_v0v1, coef_v1v1])
-        cut_offset = np.array(
-            [
-                v[:, 0] @ constr_offset @ v[:, 0],
-                v[:, 0] @ constr_offset @ v[:, 1],
-                v[:, 1] @ constr_offset @ v[:, 1],
-            ]
-        )
-
-        obj = objective_coef @ x
-        constr = -w[0]
-        n_linear_cuts = 0
-        n_lmi_cuts = lmi_cuts.n
-        if iteration == 0:
-            logger.info(
-                f"{'it':>3s} "
-                f"{'obj':>6s} {'constr':>6s} {'x0':>7s} {'x1':>7s} "
-                f"{'lnrcuts'} {'lmicuts'}"
-            )
-        logger.info(
-            f"{iteration + 1:3d} "
-            f"{obj:6.2f} {constr:6.2f} {x[0]:7.4f} {x[1]:7.4f} "
-            f"{n_linear_cuts:7d} {n_lmi_cuts:7d}"
-        )
-
+    for iteration, x in enumerate(x_list):
         iterate_color = "C0"
         ax.plot(x[0], x[1], "o", markersize=4, color=iterate_color)
         _ax = ax_it_by_it.ravel()[iteration]
         _ax.plot(x[0], x[1], "o", markersize=4, color=iterate_color)
-
-        lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
-
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    px = np.linspace(*xlim, 30)
-    py = np.linspace(*ylim, 30)
 
     for i in range(lmi_cuts.n):
         _C = lmi_cuts.coef[3 * i : 3 * i + 3]
@@ -380,6 +333,72 @@ def sdp_lmi_cuts():
     os.makedirs("tmp", exist_ok=True)
     fig.savefig("tmp/sdp_lmi_cut.pdf", dpi=300)
     fig_it_by_it.savefig("tmp/sdp_lmi_cut_it_by_it.pdf", dpi=300)
+
+
+def _sdp_lmi_cuts_impl(objective_coef, constr_coefs, constr_offset):
+    constr_svec_coefs = np.stack(
+        [cpsdppy.linalg.svec(x) for x in constr_coefs], axis=1
+    )
+    constr_svec_offset = cpsdppy.linalg.svec(constr_offset)
+
+    model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
+
+    model.add_variables(lb=-2, ub=2, obj=objective_coef)
+
+    lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(model)
+
+    n_iterations = 4
+    x_list = []
+
+    for iteration in range(n_iterations):
+        lmi_cuts.iteration = iteration
+        model.solve()
+        x = model.get_solution()[:2]
+        matrix = cpsdppy.linalg.svec_inv(
+            constr_svec_coefs @ x + constr_svec_offset, part="f"
+        )
+
+        w, v = np.linalg.eigh(matrix)
+
+        coef_v0 = np.sum(constr_coefs * v[:, 0], axis=2)
+        coef_v1 = np.sum(constr_coefs * v[:, 1], axis=2)
+        coef_v0v0 = -np.sum(coef_v0 * v[:, 0], axis=1)
+        coef_v0v1 = -np.sum(coef_v0 * v[:, 1], axis=1)
+        coef_v1v1 = -np.sum(coef_v1 * v[:, 1], axis=1)
+        cut_coef = -np.stack([coef_v0v0, coef_v0v1, coef_v1v1])
+        cut_offset = np.array(
+            [
+                v[:, 0] @ constr_offset @ v[:, 0],
+                v[:, 0] @ constr_offset @ v[:, 1],
+                v[:, 1] @ constr_offset @ v[:, 1],
+            ]
+        )
+
+        obj = objective_coef @ x
+        constr = -w[0]
+        n_linear_cuts = 0
+        n_lmi_cuts = lmi_cuts.n
+        if iteration == 0:
+            logger.info(
+                f"{'it':>3s} "
+                f"{'obj':>6s} {'constr':>6s} {'x0':>7s} {'x1':>7s} "
+                f"{'lnrcuts'} {'lmicuts'}"
+            )
+        logger.info(
+            f"{iteration + 1:3d} "
+            f"{obj:6.2f} {constr:6.2f} {x[0]:7.4f} {x[1]:7.4f} "
+            f"{n_linear_cuts:7d} {n_lmi_cuts:7d}"
+        )
+        x_list.append(x)
+
+        lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
+
+    return {
+        "x_list": x_list,
+        "lmi_cuts": lmi_cuts,
+        "constr_svec_coefs": constr_svec_coefs,
+        "constr_svec_offset": constr_svec_offset,
+    }
 
 
 if __name__ == "__main__":
