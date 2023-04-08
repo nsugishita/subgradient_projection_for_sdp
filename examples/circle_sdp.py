@@ -86,27 +86,6 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    # fig, ax = plt.subplots()
-    # data = np.zeros((10, 10))
-    # data[:] = np.nan
-    # for i in range(10):
-    #     for j in range(i):
-    #         data[i, j] = 1
-    # data2 = np.zeros((10, 10))
-    # data2[:] = np.nan
-    # for i in range(10):
-    #     for j in range(max(i-2, 0), min(i+2, 10)):
-    #         data2[j, i] = 1
-    # # cmap = ListedColormap([(0, 0, 0, 0), f"C0"])
-    # # cmap = ListedColormap([(0, 0, 0, 0), (1, 0, 0, 1)])
-    # cmap = ListedColormap([(1, 0, 0, 1)])
-    # ax.imshow(data, interpolation="nearest", cmap=cmap)
-    # # cmap = ListedColormap([(0, 0, 0, 0), (0, 1, 0, 1)])
-    # cmap = ListedColormap([(0, 1, 0, 1)])
-    # ax.imshow(data2, interpolation="nearest", cmap=cmap)
-    # fig.savefig("tmp/tmp.png")
-    # return
-
     handler = logging.StreamHandler()
     logging.getLogger().addHandler(handler)
     logging.getLogger().setLevel(logging.INFO)
@@ -192,49 +171,123 @@ def sdp_linear_cuts():
 
 
 def sdp_lmi_cuts():
-    objective_coef = np.array([0.0, 1.0])
+    problem_names = "abcd"
+    problem_names = "c"
+    for problem_name in problem_names:
+        if problem_name == "a":
+            objective_coef = np.array([0.0, 1.0])
 
-    a = np.array([[1, 0], [0, -1]], dtype=float)
-    b = np.array([[0, 1], [1, 0]], dtype=float)
-    c = np.array([[1, 0], [0, 1]], dtype=float)
+            a = np.array([[1, 0], [0, -1]], dtype=float)
+            b = np.array([[0, 1], [1, 0]], dtype=float)
+            c = np.array([[1, 0], [0, 1]], dtype=float)
 
-    # a = np.array(
-    #     [
-    #         [0, 1, 0],
-    #         [1, 0, 1],
-    #         [0, 1, 0],
-    #     ],
-    #     dtype=float,
-    # )
-    # b = np.array(
-    #     [
-    #         [0, 0, 0.8],
-    #         [0, 0, 0],
-    #         [0.8, 0, 0],
-    #     ],
-    #     dtype=float,
-    # )
-    # b = np.array(
-    #     [
-    #         [0, 0, 1],
-    #         [0, 0, 0],
-    #         [1, 0, 0],
-    #     ],
-    #     dtype=float,
-    # )
-    # c = np.array(
-    #     [
-    #         [1, 0, 0],
-    #         [0, 1, 0],
-    #         [0, 0, 1],
-    #     ],
-    #     dtype=float,
-    # )
+        elif problem_name == "b":
+            objective_coef = np.array([0.0, 1.0])
 
-    constr_coefs = np.stack([a, b])
-    constr_offset = c
+            a = np.array(
+                [
+                    [0, 1, 0],
+                    [1, 0, 1],
+                    [0, 1, 0],
+                ],
+                dtype=float,
+            )
+            b = np.array(
+                [
+                    [0, 0, 0.8],
+                    [0, 0, 0],
+                    [0.8, 0, 0],
+                ],
+                dtype=float,
+            )
+            b = np.array(
+                [
+                    [0, 0, 1],
+                    [0, 0, 0],
+                    [1, 0, 0],
+                ],
+                dtype=float,
+            )
+            c = np.array(
+                [
+                    [1, 0, 0],
+                    [0, 1, 0],
+                    [0, 0, 1],
+                ],
+                dtype=float,
+            )
 
-    result = _sdp_lmi_cuts_impl(objective_coef, constr_coefs, constr_offset)
+        elif problem_name == "c":
+            objective_coef = np.array([-1, 0])
+            a = np.array(
+                [
+                    [0, 0, 1, 0],
+                    [0, 0, -1, 1],
+                    [1, -1, 0, 0],
+                    [0, 1, 0, 0],
+                ],
+                dtype=float,
+            )
+            b = np.array(
+                [
+                    [0, 1, 0, -1],
+                    [1, 0, 1, 0],
+                    [0, 1, 0, 1],
+                    [-1, 0, 1, 0],
+                ],
+                dtype=float,
+            )
+            c = np.array(
+                [
+                    [1, 0, 0, 0],
+                    [0, 1, 0, 0],
+                    [0, 0, 1, 0],
+                    [0, 0, 0, 1],
+                ],
+                dtype=float,
+            )
+
+        elif problem_name == "d":
+            objective_coef = np.array([0.0, 1.0])
+            a = np.array(
+                [
+                    [0, 0, 1, 0],
+                    [0, 0, -0.5, 1],
+                    [1, -0.5, 0, 0],
+                    [0, 1, 0, 0],
+                ],
+                dtype=float,
+            )
+            b = np.array(
+                [
+                    [0, 0.5, 0, -1],
+                    [0.5, 0, 0.5, 0],
+                    [0, 0.5, 0, 0.5],
+                    [-1, 0, 0.5, 0],
+                ],
+                dtype=float,
+            )
+            c = np.array(
+                [
+                    [1, 0, 0, 0],
+                    [0, 1, 0, 0],
+                    [0, 0, 1, 0],
+                    [0, 0, 0, 1],
+                ],
+                dtype=float,
+            )
+
+        constr_coefs = np.stack([a, b])
+        constr_offset = c
+        _sdp_lmi_cuts_impl(
+            problem_name, objective_coef, constr_coefs, constr_offset
+        )
+
+
+def _sdp_lmi_cuts_impl(
+    problem_name, objective_coef, constr_coefs, constr_offset
+):
+    result = _sdp_lmi_cuts_solver(objective_coef, constr_coefs, constr_offset)
     x_list = result["x_list"]
     lmi_cuts = result["lmi_cuts"]
     constr_svec_coefs = result["constr_svec_coefs"]
@@ -331,11 +384,13 @@ def sdp_lmi_cuts():
     ax.axis("equal")
 
     os.makedirs("tmp", exist_ok=True)
-    fig.savefig("tmp/sdp_lmi_cut.pdf", dpi=300)
-    fig_it_by_it.savefig("tmp/sdp_lmi_cut_it_by_it.pdf", dpi=300)
+    fig.savefig(f"tmp/sdp_lmi_cut_{problem_name}.pdf", dpi=300)
+    fig_it_by_it.savefig(
+        f"tmp/sdp_lmi_cut_it_by_it_{problem_name}.pdf", dpi=300
+    )
 
 
-def _sdp_lmi_cuts_impl(objective_coef, constr_coefs, constr_offset):
+def _sdp_lmi_cuts_solver(objective_coef, constr_coefs, constr_offset):
     constr_svec_coefs = np.stack(
         [cpsdppy.linalg.svec(x) for x in constr_coefs], axis=1
     )
