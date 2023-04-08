@@ -251,7 +251,7 @@ def sdp_lmi_cuts():
     ax.axvline(-2, lw=1, color=box_color)
     ax.axvline(2, lw=1, color=box_color)
 
-    fig_it_by_it, ax_it_by_it = plt.subplots(2, 2, sharex=True, sharey=True)
+    fig_it_by_it, ax_it_by_it = plt.subplots(2, 2)
     for _ax in ax_it_by_it.ravel():
         _ax.axhline(-2, lw=1, color=box_color)
         _ax.axhline(2, lw=1, color=box_color)
@@ -376,6 +376,9 @@ def sdp_lmi_cuts():
         _ax.set_xlim(*xlim)
         _ax.set_ylim(*ylim)
         _ax.set_title(f"iteration {i + 1}")
+        _ax.axis("equal")
+    for _ax in ax_it_by_it[0, :]:
+        _ax.set_xticklabels([])
     ax.axis("equal")
 
     os.makedirs("tmp", exist_ok=True)
