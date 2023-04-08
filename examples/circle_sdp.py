@@ -76,6 +76,7 @@ This constraint can be written as SOCP.
 import logging
 import os
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -85,6 +86,27 @@ logger = logging.getLogger(__name__)
 
 
 def main():
+    # fig, ax = plt.subplots()
+    # data = np.zeros((10, 10))
+    # data[:] = np.nan
+    # for i in range(10):
+    #     for j in range(i):
+    #         data[i, j] = 1
+    # data2 = np.zeros((10, 10))
+    # data2[:] = np.nan
+    # for i in range(10):
+    #     for j in range(max(i-2, 0), min(i+2, 10)):
+    #         data2[j, i] = 1
+    # # cmap = ListedColormap([(0, 0, 0, 0), f"C0"])
+    # # cmap = ListedColormap([(0, 0, 0, 0), (1, 0, 0, 1)])
+    # cmap = ListedColormap([(1, 0, 0, 1)])
+    # ax.imshow(data, interpolation="nearest", cmap=cmap)
+    # # cmap = ListedColormap([(0, 0, 0, 0), (0, 1, 0, 1)])
+    # cmap = ListedColormap([(0, 1, 0, 1)])
+    # ax.imshow(data2, interpolation="nearest", cmap=cmap)
+    # fig.savefig("tmp/tmp.png")
+    # return
+
     handler = logging.StreamHandler()
     logging.getLogger().addHandler(handler)
     logging.getLogger().setLevel(logging.INFO)
@@ -108,7 +130,7 @@ def sdp_linear_cuts():
 
     constr_coefs = np.stack([a, b])
     constr_svec_coefs = np.stack(
-        [cpsdppy.linalg.svec(a), cpsdppy.linalg.svec(b)]
+        [cpsdppy.linalg.svec(a), cpsdppy.linalg.svec(b)], axis=1
     )
     constr_svec_offset = cpsdppy.linalg.svec(c)
 
@@ -128,7 +150,7 @@ def sdp_linear_cuts():
         model.solve()
         x = model.get_solution()
         matrix = cpsdppy.linalg.svec_inv(
-            x @ constr_svec_coefs + constr_svec_offset, part="f"
+            constr_svec_coefs @ x + constr_svec_offset, part="f"
         )
         w, v = np.linalg.eigh(matrix)
         f = -w[0]
@@ -141,7 +163,7 @@ def sdp_linear_cuts():
         linear_cuts.add_linear_cuts(coef=g, offset=_offset)
 
         obj = objective_coef @ x
-        constr = np.sum(x**2) - 1
+        constr = -w[0]
         n_linear_cuts = linear_cuts.n
         n_lmi_cuts = 0
         if iteration == 0:
@@ -182,32 +204,71 @@ def sdp_lmi_cuts():
     b = np.array([[0, 1], [1, 0]], dtype=float)
     c = np.array([[1, 0], [0, 1]], dtype=float)
 
+    # a = np.array(
+    #     [
+    #         [0, 1, 0],
+    #         [1, 0, 1],
+    #         [0, 1, 0],
+    #     ],
+    #     dtype=float,
+    # )
+    # b = np.array(
+    #     [
+    #         [0, 0, 0.8],
+    #         [0, 0, 0],
+    #         [0.8, 0, 0],
+    #     ],
+    #     dtype=float,
+    # )
+    # b = np.array(
+    #     [
+    #         [0, 0, 1],
+    #         [0, 0, 0],
+    #         [1, 0, 0],
+    #     ],
+    #     dtype=float,
+    # )
+    # c = np.array(
+    #     [
+    #         [1, 0, 0],
+    #         [0, 1, 0],
+    #         [0, 0, 1],
+    #     ],
+    #     dtype=float,
+    # )
+
     constr_coefs = np.stack([a, b])
     constr_offset = c
     constr_svec_coefs = np.stack(
-        [cpsdppy.linalg.svec(a), cpsdppy.linalg.svec(b)]
+        [cpsdppy.linalg.svec(a), cpsdppy.linalg.svec(b)], axis=1
     )
     constr_svec_offset = cpsdppy.linalg.svec(c)
 
     fig, ax = plt.subplots()
-    t = np.linspace(0, 2 * np.pi, 100)
-    x = np.cos(t)
-    y = np.sin(t)
-    ax.plot(x, y, "-", color="lightgray", lw=1)
-    ax.axis("equal")
-    ax.axhline(-2, lw=1, color="C0")
-    ax.axhline(2, lw=1, color="C0")
-    ax.axvline(-2, lw=1, color="C0")
-    ax.axvline(2, lw=1, color="C0")
+    box_color = "lightgray"
+    ax.axhline(-2, lw=1, color=box_color)
+    ax.axhline(2, lw=1, color=box_color)
+    ax.axvline(-2, lw=1, color=box_color)
+    ax.axvline(2, lw=1, color=box_color)
+
+    fig_it_by_it, ax_it_by_it = plt.subplots(2, 2, sharex=True, sharey=True)
+    for _ax in ax_it_by_it.ravel():
+        _ax.axhline(-2, lw=1, color=box_color)
+        _ax.axhline(2, lw=1, color=box_color)
+        _ax.axvline(-2, lw=1, color=box_color)
+        _ax.axvline(2, lw=1, color=box_color)
+
     C_list = []
     offset_list = []
 
-    for iteration in range(3):
+    n_iterations = 4
+
+    for iteration in range(n_iterations):
         lmi_cuts.iteration = iteration
         model.solve()
         x = model.get_solution()[:2]
         matrix = cpsdppy.linalg.svec_inv(
-            x @ constr_svec_coefs + constr_svec_offset, part="f"
+            constr_svec_coefs @ x + constr_svec_offset, part="f"
         )
 
         w, v = np.linalg.eigh(matrix)
@@ -227,7 +288,7 @@ def sdp_lmi_cuts():
         )
 
         obj = objective_coef @ x
-        constr = np.sum(x**2) - 1
+        constr = -w[0]
         n_linear_cuts = 0
         n_lmi_cuts = lmi_cuts.n
         if iteration == 0:
@@ -242,7 +303,10 @@ def sdp_lmi_cuts():
             f"{n_linear_cuts:7d} {n_lmi_cuts:7d}"
         )
 
-        ax.plot(x[0], x[1], "o", markersize=4, color="C0")
+        iterate_color = "C0"
+        ax.plot(x[0], x[1], "o", markersize=4, color=iterate_color)
+        _ax = ax_it_by_it.ravel()[iteration]
+        _ax.plot(x[0], x[1], "o", markersize=4, color=iterate_color)
 
         lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
         C_list.append(cut_coef)
@@ -250,21 +314,73 @@ def sdp_lmi_cuts():
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
-    px = np.linspace(*xlim, 50)
-    py = np.linspace(*ylim, 50)
+    px = np.linspace(*xlim, 300)
+    py = np.linspace(*ylim, 300)
 
-    for _C, _offset in zip(C_list, offset_list):
+    for i, (_C, _offset) in enumerate(zip(C_list, offset_list)):
         det = []
         for _x in px:
             for _y in py:
                 _xy = np.array([_x, _y])
                 Cx = _C @ _xy + _offset
-                det.append(Cx[0] * Cx[2] - Cx[1] ** 2)
+                buf = np.min([Cx[0] * Cx[2] - Cx[1] ** 2, Cx[0], Cx[2]])
+                det.append(buf)
         det = np.array(det).reshape(px.size, py.size)
-        ax.contour(px, py, det, levels=[0], colors=[f"C{0}"], linewidths=1)
+
+        mat = np.full(det.shape, np.nan)
+        mat[det < 0] = 1
+        mat[det >= 0] = 0
+        color = mpl.colors.to_rgb(f"C{i + 1}") + (0.3,)
+        cmap = mpl.colors.ListedColormap([(0, 0, 0, 0), color])
+        # ax.matshow(mat, cmap=cmap, alpha=0.5)
+        if i < ax_it_by_it.size - 1:
+            ax.imshow(
+                mat.T,
+                interpolation="nearest",
+                aspect="auto",
+                cmap=cmap,
+                extent=[xlim[0], xlim[1], ylim[0], ylim[1]],
+                origin="lower",
+            )
+            for _ax in ax_it_by_it.ravel()[i + 1 :]:
+                _ax.imshow(
+                    mat.T,
+                    interpolation="nearest",
+                    aspect="auto",
+                    cmap=cmap,
+                    extent=[xlim[0], xlim[1], ylim[0], ylim[1]],
+                    origin="lower",
+                )
+
+    det = []
+    for _y in py:
+        for _x in px:
+            _xy = np.array([_x, _y])
+            Cx = constr_svec_coefs @ _xy + constr_svec_offset
+            Cx = cpsdppy.linalg.svec_inv(Cx, part="f")
+            det.append(np.linalg.eigh(Cx)[0][0])
+    det = np.array(det).reshape(py.size, px.size)
+    feasible_region_color = "gray"
+    ax.contour(
+        px, py, det, levels=[0], colors=[feasible_region_color], linewidths=1
+    )
+    for i, _ax in enumerate(ax_it_by_it.ravel()):
+        _ax.contour(
+            px,
+            py,
+            det,
+            levels=[0],
+            colors=[feasible_region_color],
+            linewidths=1,
+        )
+        _ax.set_xlim(*xlim)
+        _ax.set_ylim(*ylim)
+        _ax.set_title(f"iteration {i + 1}")
+    ax.axis("equal")
 
     os.makedirs("tmp", exist_ok=True)
     fig.savefig("tmp/sdp_lmi_cut.pdf", dpi=300)
+    fig_it_by_it.savefig("tmp/sdp_lmi_cut_it_by_it.pdf", dpi=300)
 
 
 if __name__ == "__main__":
