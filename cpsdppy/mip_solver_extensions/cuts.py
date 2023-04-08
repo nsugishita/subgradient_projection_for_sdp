@@ -206,6 +206,7 @@ class LMICuts:
         self.coef = scipy.sparse.csr_matrix(
             ([], ([], [])), shape=(0, model.get_n_variables())
         )
+        self.offset = np.array([]).reshape(0, 3)
 
     def add_lmi_cuts(self, coef, offset):
         """Add LMI cuts
@@ -256,6 +257,10 @@ class LMICuts:
             )
 
             self.coef = scipy.sparse.vstack([self.coef, _coef]).tocsr()
+
+            self.offset = np.concatenate(
+                [self.offset, _offset[None, :]], axis=0
+            )
 
             self.variable_index = np.concatenate(
                 [
@@ -316,13 +321,14 @@ class LMICuts:
             self.variable_index = self.variable_index[kept]
             self.last_active_iteration = self.last_active_iteration[kept]
             self.coef = self.coef[np.repeat(kept, 3)]
+            self.offset = self.offset[kept]
             self.n -= dropped.size
         logger.debug(f"{self.__class__.__name__} removed {dropped.size} cuts")
 
     def solve_exit_hook(self, model):
         slacks = np.empty(self.n)
         x = model.get_solution()[: self.n_variables]
-        svec = (self.coef @ x).reshape(-1, 3)
+        svec = (self.coef @ x).reshape(-1, 3) + self.offset
         matrix = np.empty((2, 2))
         for i, (a, b, c) in enumerate(svec):
             matrix[0, 0] = a

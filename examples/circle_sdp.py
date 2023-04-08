@@ -258,9 +258,6 @@ def sdp_lmi_cuts():
         _ax.axvline(-2, lw=1, color=box_color)
         _ax.axvline(2, lw=1, color=box_color)
 
-    C_list = []
-    offset_list = []
-
     n_iterations = 4
 
     for iteration in range(n_iterations):
@@ -309,15 +306,15 @@ def sdp_lmi_cuts():
         _ax.plot(x[0], x[1], "o", markersize=4, color=iterate_color)
 
         lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
-        C_list.append(cut_coef)
-        offset_list.append(cut_offset)
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
-    px = np.linspace(*xlim, 300)
-    py = np.linspace(*ylim, 300)
+    px = np.linspace(*xlim, 30)
+    py = np.linspace(*ylim, 30)
 
-    for i, (_C, _offset) in enumerate(zip(C_list, offset_list)):
+    for i in range(lmi_cuts.n):
+        _C = lmi_cuts.coef[3 * i : 3 * i + 3]
+        _offset = lmi_cuts.offset[i]
         det = []
         for _x in px:
             for _y in py:
@@ -332,7 +329,6 @@ def sdp_lmi_cuts():
         mat[det >= 0] = 0
         color = mpl.colors.to_rgb(f"C{i + 1}") + (0.3,)
         cmap = mpl.colors.ListedColormap([(0, 0, 0, 0), color])
-        # ax.matshow(mat, cmap=cmap, alpha=0.5)
         if i < ax_it_by_it.size - 1:
             ax.imshow(
                 mat.T,
