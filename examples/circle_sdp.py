@@ -322,37 +322,19 @@ def _sdp_lmi_cuts_impl(
         _C = lmi_cuts.coef[3 * i : 3 * i + 3]
         _offset = lmi_cuts.offset[i]
         det = []
-        for _x in px:
-            for _y in py:
+        for _y in py:
+            for _x in px:
                 _xy = np.array([_x, _y])
                 Cx = _C @ _xy + _offset
                 buf = np.min([Cx[0] * Cx[2] - Cx[1] ** 2, Cx[0], Cx[2]])
                 det.append(buf)
         det = np.array(det).reshape(px.size, py.size)
 
-        mat = np.full(det.shape, np.nan)
-        mat[det < 0] = 1
-        mat[det >= 0] = 0
-        color = mpl.colors.to_rgb(f"C{i + 1}") + (0.3,)
-        cmap = mpl.colors.ListedColormap([(0, 0, 0, 0), color])
+        color = mpl.colors.to_rgb(f"C{i + 1}")
         if i < ax_it_by_it.size - 1:
-            ax.imshow(
-                mat.T,
-                interpolation="nearest",
-                aspect="auto",
-                cmap=cmap,
-                extent=[xlim[0], xlim[1], ylim[0], ylim[1]],
-                origin="lower",
-            )
+            plot_lmi_cut_line(ax, px, py, det, color=color)
             for _ax in ax_it_by_it.ravel()[i + 1 :]:
-                _ax.imshow(
-                    mat.T,
-                    interpolation="nearest",
-                    aspect="auto",
-                    cmap=cmap,
-                    extent=[xlim[0], xlim[1], ylim[0], ylim[1]],
-                    origin="lower",
-                )
+                plot_lmi_cut_line(_ax, px, py, det, color=color)
 
     det = []
     for _y in py:
@@ -387,6 +369,25 @@ def _sdp_lmi_cuts_impl(
     fig.savefig(f"tmp/sdp_lmi_cut_{problem_name}.pdf", dpi=300)
     fig_it_by_it.savefig(
         f"tmp/sdp_lmi_cut_it_by_it_{problem_name}.pdf", dpi=300
+    )
+
+
+def plot_lmi_cut_line(ax, px, py, matrix, color):
+    ax.contour(px, py, matrix, levels=[0], colors=[color], linewidths=1)
+
+
+def plot_lmi_cut_area(ax, px, py, matrix, color):
+    zeroonematrix = np.full(matrix.shape, np.nan)
+    zeroonematrix[matrix < 0] = 1
+    zeroonematrix[matrix >= 0] = 0
+    cmap = mpl.colors.ListedColormap([(0, 0, 0, 0), color])
+    ax.imshow(
+        zeroonematrix,
+        interpolation="nearest",
+        aspect="auto",
+        cmap=cmap,
+        extent=[px[0], px[-1], py[0], py[-1]],
+        origin="lower",
     )
 
 
