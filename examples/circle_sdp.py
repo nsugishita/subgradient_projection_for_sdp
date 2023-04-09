@@ -113,18 +113,9 @@ def sdp_linear_cuts():
     )
     constr_svec_offset = cpsdppy.linalg.svec(c)
 
-    fig, ax = plt.subplots()
-    t = np.linspace(0, 2 * np.pi, 100)
-    x = np.cos(t)
-    y = np.sin(t)
-    ax.plot(x, y, "-", color="lightgray", lw=1)
-    ax.axis("equal")
-    ax.axhline(-2, lw=1, color="C0")
-    ax.axhline(2, lw=1, color="C0")
-    ax.axvline(-2, lw=1, color="C0")
-    ax.axvline(2, lw=1, color="C0")
+    x_list = []
 
-    for iteration in range(10):
+    for iteration in range(5):
         linear_cuts.iteration = iteration
         model.solve()
         x = model.get_solution()
@@ -156,10 +147,41 @@ def sdp_linear_cuts():
             f"{obj:6.2f} {constr:6.2f} {x[0]:7.4f} {x[1]:7.4f} "
             f"{n_linear_cuts:7d} {n_lmi_cuts:7d}"
         )
+        x_list.append(x)
 
+    fig, ax = plt.subplots()
+    ax.axis("equal")
+    ax.axhline(-2, lw=1, color="C0")
+    ax.axhline(2, lw=1, color="C0")
+    ax.axvline(-2, lw=1, color="C0")
+    ax.axvline(2, lw=1, color="C0")
+
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    px = np.linspace(*xlim, 300)
+    py = np.linspace(*ylim, 300)
+
+    det = []
+    for _y in py:
+        for _x in px:
+            _xy = np.array([_x, _y])
+            Cx = constr_svec_coefs @ _xy + constr_svec_offset
+            Cx = cpsdppy.linalg.svec_inv(Cx, part="f")
+            det.append(np.linalg.eigh(Cx)[0][0])
+    det = np.array(det).reshape(py.size, px.size)
+    feasible_region_color = "gray"
+    ax.contour(
+        px, py, det, levels=[0], colors=[feasible_region_color], linewidths=1
+    )
+
+    for i, x in enumerate(x_list):
         ax.plot(x[0], x[1], "o", color="C0", markersize=4)
+
+    for i in range(linear_cuts.n):
+        g = linear_cuts.coef[i]
+        offset = linear_cuts.offset[i]
         ax.axline(
-            (0, -_offset / g[1]),
+            (0, -offset / g[1]),
             slope=-g[0] / g[1],
             color="C0",
             lw=0.5,
