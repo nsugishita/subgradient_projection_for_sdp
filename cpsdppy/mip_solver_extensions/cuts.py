@@ -72,6 +72,11 @@ class LinearCuts:
 
         model.add_hooks(self)
 
+        self.coef = np.array([], dtype=float).reshape(
+            0, model.get_n_variables()
+        )
+        self.offset = np.array([], dtype=float)
+
     @property
     def n(self):
         return self.linear_constraint_index.size
@@ -94,6 +99,9 @@ class LinearCuts:
             offset = np.atleast_1d(offset)
             row = new_constraint_index[coef.row]
             model.set_linear_constraint_coefs(zip(row, coef.col, coef.data))
+
+            self.coef = np.concatenate([self.coef, coef.toarray()])
+            self.offset = np.concatenate([self.offset, offset])
         else:
             coef = np.atleast_2d(coef)
             offset = np.atleast_1d(offset)
@@ -104,6 +112,9 @@ class LinearCuts:
             row = np.repeat(new_constraint_index, n_vars)
             col = np.tile(np.arange(coef.shape[1]), n_new_cuts)
             model.set_linear_constraint_coefs(zip(row, col, coef.ravel()))
+
+            self.coef = np.concatenate([self.coef, coef])
+            self.offset = np.concatenate([self.offset, offset])
         self.linear_constraint_index = np.concatenate(
             [
                 self.linear_constraint_index,
@@ -129,6 +140,8 @@ class LinearCuts:
             )
             self.linear_constraint_index = self.linear_constraint_index[kept]
             self.last_active_iteration = self.last_active_iteration[kept]
+            self.coef = self.coef[kept]
+            self.offset = self.offset[kept]
         logger.debug(f"{self.__class__.__name__} removed {dropped.size} cuts")
 
     def solve_exit_hook(self, model):
