@@ -75,6 +75,7 @@ This constraint can be written as SOCP.
 
 import logging
 import os
+import shutil
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -84,70 +85,152 @@ import cpsdppy
 
 logger = logging.getLogger(__name__)
 
+plot_dir = "tmp/circle_sdp"
+
+if os.path.exists(plot_dir):
+    shutil.rmtree(plot_dir)
+os.makedirs(plot_dir, exist_ok=True)
+
+grid_size = 300
+
 
 def main():
     handler = logging.StreamHandler()
     logging.getLogger().addHandler(handler)
     logging.getLogger().setLevel(logging.INFO)
 
-    sdp_linear_cuts()
-    sdp_lmi_cuts()
+    problem_names = "abcd"
+    for problem_name in problem_names:
+        print(f"{problem_name=}  {'linear_cuts'}")
+        problem_data = get_problem_data(problem_name)
+        sdp_linear_cuts(**problem_data)
+        print(f"{problem_name=}  {'lmi_cuts'}")
+        sdp_lmi_cuts(**problem_data)
 
 
-def sdp_linear_cuts():
-    objective_coef = np.array([0.0, 1.0])
+def get_problem_data(problem_name):
+    if problem_name == "a":
+        objective_coef = np.array([0.0, 1.0])
 
-    model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
+        a = np.array([[1, 0], [0, -1]], dtype=float)
+        b = np.array([[0, 1], [1, 0]], dtype=float)
+        c = np.array([[1, 0], [0, 1]], dtype=float)
 
-    model.add_variables(lb=-2, ub=2, obj=objective_coef)
+    elif problem_name == "b":
+        objective_coef = np.array([0.0, 1.0])
 
-    linear_cuts = cpsdppy.mip_solver_extensions.LinearCuts(model)
+        a = np.array(
+            [
+                [0, 1, 0],
+                [1, 0, 1],
+                [0, 1, 0],
+            ],
+            dtype=float,
+        )
+        b = np.array(
+            [
+                [0, 0, 0.8],
+                [0, 0, 0],
+                [0.8, 0, 0],
+            ],
+            dtype=float,
+        )
+        b = np.array(
+            [
+                [0, 0, 1],
+                [0, 0, 0],
+                [1, 0, 0],
+            ],
+            dtype=float,
+        )
+        c = np.array(
+            [
+                [1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+            ],
+            dtype=float,
+        )
 
-    a = np.array([[1, 0], [0, -1]], dtype=float)
-    b = np.array([[0, 1], [1, 0]], dtype=float)
-    c = np.array([[1, 0], [0, 1]], dtype=float)
+    elif problem_name == "c":
+        objective_coef = np.array([-1, 0])
+        a = np.array(
+            [
+                [0, 0, 1, 0],
+                [0, 0, -1, 1],
+                [1, -1, 0, 0],
+                [0, 1, 0, 0],
+            ],
+            dtype=float,
+        )
+        b = np.array(
+            [
+                [0, 1, 0, -1],
+                [1, 0, 1, 0],
+                [0, 1, 0, 1],
+                [-1, 0, 1, 0],
+            ],
+            dtype=float,
+        )
+        c = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1],
+            ],
+            dtype=float,
+        )
+
+    elif problem_name == "d":
+        objective_coef = np.array([0.0, 1.0])
+        a = np.array(
+            [
+                [0, 0, 1, 0],
+                [0, 0, -0.5, 1],
+                [1, -0.5, 0, 0],
+                [0, 1, 0, 0],
+            ],
+            dtype=float,
+        )
+        b = np.array(
+            [
+                [0, 0.5, 0, -1],
+                [0.5, 0, 0.5, 0],
+                [0, 0.5, 0, 0.5],
+                [-1, 0, 0.5, 0],
+            ],
+            dtype=float,
+        )
+        c = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1],
+            ],
+            dtype=float,
+        )
 
     constr_coefs = np.stack([a, b])
-    constr_svec_coefs = np.stack(
-        [cpsdppy.linalg.svec(a), cpsdppy.linalg.svec(b)], axis=1
+    constr_offset = c
+
+    return {
+        "problem_name": problem_name,
+        "objective_coef": objective_coef,
+        "constr_coefs": constr_coefs,
+        "constr_offset": constr_offset,
+    }
+
+
+def sdp_linear_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
+    result = _sdp_linear_cuts_solver(
+        objective_coef, constr_coefs, constr_offset
     )
-    constr_svec_offset = cpsdppy.linalg.svec(c)
-
-    x_list = []
-
-    for iteration in range(5):
-        linear_cuts.iteration = iteration
-        model.solve()
-        x = model.get_solution()
-        matrix = cpsdppy.linalg.svec_inv(
-            constr_svec_coefs @ x + constr_svec_offset, part="f"
-        )
-        w, v = np.linalg.eigh(matrix)
-        f = -w[0]
-        v_min = v[:, 0]
-
-        g = np.sum(constr_coefs * v_min, axis=2)
-        g = -np.sum(g * v_min, axis=1)
-
-        _offset = f - g @ x
-        linear_cuts.add_linear_cuts(coef=g, offset=_offset)
-
-        obj = objective_coef @ x
-        constr = -w[0]
-        n_linear_cuts = linear_cuts.n
-        n_lmi_cuts = 0
-        if iteration == 0:
-            logger.info(
-                f"{'it':>3s} "
-                f"{'obj':>6s} {'constr':>6s} {'x0':>7s} {'x1':>7s} "
-                f"{'lnrcuts'} {'lmicuts'}"
-            )
-        logger.info(
-            f"{iteration + 1:3d} "
-            f"{obj:6.2f} {constr:6.2f} {x[0]:7.4f} {x[1]:7.4f} "
-            f"{n_linear_cuts:7d} {n_lmi_cuts:7d}"
-        )
-        x_list.append(x)
+    x_list = result["x_list"]
+    linear_cuts = result["linear_cuts"]
+    constr_svec_coefs = result["constr_svec_coefs"]
+    constr_svec_offset = result["constr_svec_offset"]
 
     fig, ax = plt.subplots()
     ax.axis("equal")
@@ -158,8 +241,8 @@ def sdp_linear_cuts():
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
-    px = np.linspace(*xlim, 300)
-    py = np.linspace(*ylim, 300)
+    px = np.linspace(*xlim, grid_size)
+    py = np.linspace(*ylim, grid_size)
 
     det = []
     for _y in py:
@@ -180,8 +263,13 @@ def sdp_linear_cuts():
     for i in range(linear_cuts.n):
         g = linear_cuts.coef[i]
         offset = linear_cuts.offset[i]
+
+        if np.abs(-offset / g[1]) < np.abs(-offset / g[0]):
+            point = (0, -offset / g[1])
+        else:
+            point = (-offset / g[0], 0)
         ax.axline(
-            (0, -offset / g[1]),
+            point,
             slope=-g[0] / g[1],
             color="C0",
             lw=0.5,
@@ -189,126 +277,13 @@ def sdp_linear_cuts():
         )
 
     os.makedirs("tmp", exist_ok=True)
-    fig.savefig("tmp/sdp_linear_cut.pdf", dpi=300)
+    figpath = f"{plot_dir}/sdp_linear_cut_{problem_name}.pdf"
+    fig.savefig(figpath, dpi=300)
+    fig.savefig(figpath.replace("pdf", "png"), dpi=300)
+    print(figpath)
 
 
-def sdp_lmi_cuts():
-    problem_names = "abcd"
-    problem_names = "c"
-    for problem_name in problem_names:
-        if problem_name == "a":
-            objective_coef = np.array([0.0, 1.0])
-
-            a = np.array([[1, 0], [0, -1]], dtype=float)
-            b = np.array([[0, 1], [1, 0]], dtype=float)
-            c = np.array([[1, 0], [0, 1]], dtype=float)
-
-        elif problem_name == "b":
-            objective_coef = np.array([0.0, 1.0])
-
-            a = np.array(
-                [
-                    [0, 1, 0],
-                    [1, 0, 1],
-                    [0, 1, 0],
-                ],
-                dtype=float,
-            )
-            b = np.array(
-                [
-                    [0, 0, 0.8],
-                    [0, 0, 0],
-                    [0.8, 0, 0],
-                ],
-                dtype=float,
-            )
-            b = np.array(
-                [
-                    [0, 0, 1],
-                    [0, 0, 0],
-                    [1, 0, 0],
-                ],
-                dtype=float,
-            )
-            c = np.array(
-                [
-                    [1, 0, 0],
-                    [0, 1, 0],
-                    [0, 0, 1],
-                ],
-                dtype=float,
-            )
-
-        elif problem_name == "c":
-            objective_coef = np.array([-1, 0])
-            a = np.array(
-                [
-                    [0, 0, 1, 0],
-                    [0, 0, -1, 1],
-                    [1, -1, 0, 0],
-                    [0, 1, 0, 0],
-                ],
-                dtype=float,
-            )
-            b = np.array(
-                [
-                    [0, 1, 0, -1],
-                    [1, 0, 1, 0],
-                    [0, 1, 0, 1],
-                    [-1, 0, 1, 0],
-                ],
-                dtype=float,
-            )
-            c = np.array(
-                [
-                    [1, 0, 0, 0],
-                    [0, 1, 0, 0],
-                    [0, 0, 1, 0],
-                    [0, 0, 0, 1],
-                ],
-                dtype=float,
-            )
-
-        elif problem_name == "d":
-            objective_coef = np.array([0.0, 1.0])
-            a = np.array(
-                [
-                    [0, 0, 1, 0],
-                    [0, 0, -0.5, 1],
-                    [1, -0.5, 0, 0],
-                    [0, 1, 0, 0],
-                ],
-                dtype=float,
-            )
-            b = np.array(
-                [
-                    [0, 0.5, 0, -1],
-                    [0.5, 0, 0.5, 0],
-                    [0, 0.5, 0, 0.5],
-                    [-1, 0, 0.5, 0],
-                ],
-                dtype=float,
-            )
-            c = np.array(
-                [
-                    [1, 0, 0, 0],
-                    [0, 1, 0, 0],
-                    [0, 0, 1, 0],
-                    [0, 0, 0, 1],
-                ],
-                dtype=float,
-            )
-
-        constr_coefs = np.stack([a, b])
-        constr_offset = c
-        _sdp_lmi_cuts_impl(
-            problem_name, objective_coef, constr_coefs, constr_offset
-        )
-
-
-def _sdp_lmi_cuts_impl(
-    problem_name, objective_coef, constr_coefs, constr_offset
-):
+def sdp_lmi_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
     result = _sdp_lmi_cuts_solver(objective_coef, constr_coefs, constr_offset)
     x_list = result["x_list"]
     lmi_cuts = result["lmi_cuts"]
@@ -331,8 +306,8 @@ def _sdp_lmi_cuts_impl(
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
-    px = np.linspace(*xlim, 300)
-    py = np.linspace(*ylim, 300)
+    px = np.linspace(*xlim, grid_size)
+    py = np.linspace(*ylim, grid_size)
 
     for iteration, x in enumerate(x_list):
         iterate_color = "C0"
@@ -387,11 +362,15 @@ def _sdp_lmi_cuts_impl(
         _ax.set_xticklabels([])
     ax.axis("equal")
 
-    os.makedirs("tmp", exist_ok=True)
-    fig.savefig(f"tmp/sdp_lmi_cut_{problem_name}.pdf", dpi=300)
-    fig_it_by_it.savefig(
-        f"tmp/sdp_lmi_cut_it_by_it_{problem_name}.pdf", dpi=300
-    )
+    figpath = f"{plot_dir}/sdp_lmi_cut_{problem_name}.pdf"
+    fig.savefig(figpath, dpi=300)
+    fig.savefig(figpath.replace("pdf", "png"), dpi=300)
+    print(figpath)
+
+    figpath = f"{plot_dir}/sdp_lmi_cut_it_by_it_{problem_name}.pdf"
+    fig_it_by_it.savefig(figpath, dpi=300)
+    fig_it_by_it.savefig(figpath.replace("pdf", "png"), dpi=300)
+    print(figpath)
 
 
 def plot_lmi_cut_line(ax, px, py, matrix, color):
@@ -411,6 +390,62 @@ def plot_lmi_cut_area(ax, px, py, matrix, color):
         extent=[px[0], px[-1], py[0], py[-1]],
         origin="lower",
     )
+
+
+def _sdp_linear_cuts_solver(objective_coef, constr_coefs, constr_offset):
+    constr_svec_coefs = np.stack(
+        [cpsdppy.linalg.svec(x) for x in constr_coefs], axis=1
+    )
+    constr_svec_offset = cpsdppy.linalg.svec(constr_offset)
+
+    model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
+
+    model.add_variables(lb=-2, ub=2, obj=objective_coef)
+
+    linear_cuts = cpsdppy.mip_solver_extensions.LinearCuts(model)
+
+    x_list = []
+
+    for iteration in range(5):
+        linear_cuts.iteration = iteration
+        model.solve()
+        x = model.get_solution()
+        matrix = cpsdppy.linalg.svec_inv(
+            constr_svec_coefs @ x + constr_svec_offset, part="f"
+        )
+        w, v = np.linalg.eigh(matrix)
+        f = -w[0]
+        v_min = v[:, 0]
+
+        g = np.sum(constr_coefs * v_min, axis=2)
+        g = -np.sum(g * v_min, axis=1)
+
+        _offset = f - g @ x
+        linear_cuts.add_linear_cuts(coef=g, offset=_offset)
+
+        obj = objective_coef @ x
+        constr = -w[0]
+        n_linear_cuts = linear_cuts.n
+        n_lmi_cuts = 0
+        if iteration == 0:
+            logger.info(
+                f"{'it':>3s} "
+                f"{'obj':>6s} {'constr':>6s} {'x0':>7s} {'x1':>7s} "
+                f"{'lnrcuts'} {'lmicuts'}"
+            )
+        logger.info(
+            f"{iteration + 1:3d} "
+            f"{obj:6.2f} {constr:6.2f} {x[0]:7.4f} {x[1]:7.4f} "
+            f"{n_linear_cuts:7d} {n_lmi_cuts:7d}"
+        )
+        x_list.append(x)
+
+    return {
+        "x_list": x_list,
+        "linear_cuts": linear_cuts,
+        "constr_svec_coefs": constr_svec_coefs,
+        "constr_svec_offset": constr_svec_offset,
+    }
 
 
 def _sdp_lmi_cuts_solver(objective_coef, constr_coefs, constr_offset):
