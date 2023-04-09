@@ -24,7 +24,7 @@ class LinearCuts:
 
     [ 1 + x     y   ]
     [               ]  >=  0
-    [   y     r - x ]
+    [   y     1 - x ]
 
     >>> coefs = np.array([
     ...     [
@@ -36,13 +36,13 @@ class LinearCuts:
     ...         [ 1,  0],
     ...     ],
     ... ])
-    >>> offset = np.array([[1, 0], [0, 1]])
+    >>> offset = np.array([[-1, 0], [0, -1]])
 
     >>> for i in range(5):
     ...     linear_cuts.iteration = i
     ...     m.solve()
     ...     x = m.get_solution()
-    ...     matrix = np.sum(coefs * x[:, None, None], axis=0) + offset
+    ...     matrix = np.sum(coefs * x[:, None, None], axis=0) - offset
     ...     w, v = np.linalg.eigh(matrix)
     ...     # f = -lambda_min(x a + y b + z c)
     ...     # g_x = -v_min(x a + y b + c) v_min(x a + y b + c)^T bullet a
@@ -53,7 +53,7 @@ class LinearCuts:
     ...         v_min @ coefs[0] @ v_min,
     ...         v_min @ coefs[1] @ v_min,
     ...     ])
-    ...     _offset = f - g @ x
+    ...     _offset = -f + g @ x
     ...     linear_cuts.add_linear_cuts(coef=g, offset=_offset)
     ...     print(f"{f:8.4f}  {x[0]:8.4f}, {x[1]:8.4f}")
     1.8284   -2.0000,  -2.0000
@@ -86,14 +86,14 @@ class LinearCuts:
 
         This adds cuts of the form
         ```
-        coef[i].T x + offset[i] <= 0.
+        coef[i].T x - offset[i] <= 0.
         ```
         """
         model = self.model()
         if isinstance(coef, scipy.sparse.spmatrix):
             n_new_cuts = coef.shape[0]
             new_constraint_index = model.add_linear_constraints(
-                sense="L", rhs=-offset
+                sense="L", rhs=offset
             )
             coef = coef.tocoo()
             offset = np.atleast_1d(offset)
@@ -107,7 +107,7 @@ class LinearCuts:
             offset = np.atleast_1d(offset)
             n_new_cuts, n_vars = coef.shape
             new_constraint_index = model.add_linear_constraints(
-                sense="L", rhs=-offset
+                sense="L", rhs=offset
             )
             row = np.repeat(new_constraint_index, n_vars)
             col = np.tile(np.arange(coef.shape[1]), n_new_cuts)
@@ -175,13 +175,13 @@ class LMICuts:
     ...         [ 1,  0],
     ...     ],
     ... ])
-    >>> offset = np.array([[1, 0], [0, 1]])
+    >>> offset = np.array([[-1, 0], [0, -1]])
 
     >>> for i in range(3):
     ...     lmi_cuts.iteration = i
     ...     m.solve()
     ...     x = m.get_solution()[:2]
-    ...     matrix = np.sum(coefs * x[:, None, None], axis=0) + offset
+    ...     matrix = np.sum(coefs * x[:, None, None], axis=0) - offset
     ...     w, v = np.linalg.eigh(matrix)
     ...     # v^T (x a + y b + z c) v : PSD
     ...     # x v^T a v + y v^T b v + z v^T c v : PSD
@@ -226,7 +226,7 @@ class LMICuts:
 
         This adds cuts of the form
         ```
-        coef[i] x + offset[i] : PSDCone
+        coef[i] x - offset[i] : PSDCone
         ```
         """
         if coef.ndim == 2:
@@ -266,7 +266,7 @@ class LMICuts:
             # coef = scipy.sparse.vstack([_coef, D])
             coef = scipy.sparse.csr_array(CZD)
             new_linear_constraint_index = model.add_linear_constraints(
-                shape=3, coef=coef, sense="E", rhs=-_offset
+                shape=3, coef=coef, sense="E", rhs=_offset
             )
 
             self.coef = scipy.sparse.vstack([self.coef, _coef]).tocsr()

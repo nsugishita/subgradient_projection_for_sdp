@@ -114,7 +114,7 @@ def get_problem_data(problem_name):
 
         a = np.array([[1, 0], [0, -1]], dtype=float)
         b = np.array([[0, 1], [1, 0]], dtype=float)
-        c = np.array([[1, 0], [0, 1]], dtype=float)
+        c = -np.array([[1, 0], [0, 1]], dtype=float)
 
     elif problem_name == "b":
         objective_coef = np.array([0.0, 1.0])
@@ -143,7 +143,7 @@ def get_problem_data(problem_name):
             ],
             dtype=float,
         )
-        c = np.array(
+        c = -np.array(
             [
                 [1, 0, 0],
                 [0, 1, 0],
@@ -172,7 +172,7 @@ def get_problem_data(problem_name):
             ],
             dtype=float,
         )
-        c = np.array(
+        c = -np.array(
             [
                 [1, 0, 0, 0],
                 [0, 1, 0, 0],
@@ -202,7 +202,7 @@ def get_problem_data(problem_name):
             ],
             dtype=float,
         )
-        c = np.array(
+        c = -np.array(
             [
                 [1, 0, 0, 0],
                 [0, 1, 0, 0],
@@ -248,7 +248,7 @@ def sdp_linear_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
     for _y in py:
         for _x in px:
             _xy = np.array([_x, _y])
-            Cx = constr_svec_coefs @ _xy + constr_svec_offset
+            Cx = constr_svec_coefs @ _xy - constr_svec_offset
             Cx = cpsdppy.linalg.svec_inv(Cx, part="f")
             det.append(np.linalg.eigh(Cx)[0][0])
     det = np.array(det).reshape(py.size, px.size)
@@ -265,9 +265,9 @@ def sdp_linear_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
         offset = linear_cuts.offset[i]
 
         if np.abs(-offset / g[1]) < np.abs(-offset / g[0]):
-            point = (0, -offset / g[1])
+            point = (0, offset / g[1])
         else:
-            point = (-offset / g[0], 0)
+            point = (offset / g[0], 0)
         ax.axline(
             point,
             slope=-g[0] / g[1],
@@ -322,7 +322,7 @@ def sdp_lmi_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
         for _y in py:
             for _x in px:
                 _xy = np.array([_x, _y])
-                Cx = _C @ _xy + _offset
+                Cx = _C @ _xy - _offset
                 buf = np.min([Cx[0] * Cx[2] - Cx[1] ** 2, Cx[0], Cx[2]])
                 det.append(buf)
         det = np.array(det).reshape(px.size, py.size)
@@ -337,7 +337,7 @@ def sdp_lmi_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
     for _y in py:
         for _x in px:
             _xy = np.array([_x, _y])
-            Cx = constr_svec_coefs @ _xy + constr_svec_offset
+            Cx = constr_svec_coefs @ _xy - constr_svec_offset
             Cx = cpsdppy.linalg.svec_inv(Cx, part="f")
             det.append(np.linalg.eigh(Cx)[0][0])
     det = np.array(det).reshape(py.size, px.size)
@@ -411,7 +411,7 @@ def _sdp_linear_cuts_solver(objective_coef, constr_coefs, constr_offset):
         model.solve()
         x = model.get_solution()
         matrix = cpsdppy.linalg.svec_inv(
-            constr_svec_coefs @ x + constr_svec_offset, part="f"
+            constr_svec_coefs @ x - constr_svec_offset, part="f"
         )
         w, v = np.linalg.eigh(matrix)
         f = -w[0]
@@ -420,7 +420,7 @@ def _sdp_linear_cuts_solver(objective_coef, constr_coefs, constr_offset):
         g = np.sum(constr_coefs * v_min, axis=2)
         g = -np.sum(g * v_min, axis=1)
 
-        _offset = f - g @ x
+        _offset = -f + g @ x
         linear_cuts.add_linear_cuts(coef=g, offset=_offset)
 
         obj = objective_coef @ x
@@ -468,7 +468,7 @@ def _sdp_lmi_cuts_solver(objective_coef, constr_coefs, constr_offset):
         model.solve()
         x = model.get_solution()[:2]
         matrix = cpsdppy.linalg.svec_inv(
-            constr_svec_coefs @ x + constr_svec_offset, part="f"
+            constr_svec_coefs @ x - constr_svec_offset, part="f"
         )
 
         w, v = np.linalg.eigh(matrix)
