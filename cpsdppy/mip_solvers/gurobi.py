@@ -266,7 +266,7 @@ class GurobiInterface(base.BaseSolverInterface):
         self.model.update()
         return variable_indices, qconstr_indices
 
-    def set_variable_lb(self, index, value) -> None:
+    def set_variable_lb(self, index=None, value=None) -> None:
         """Set variable lower bounds
 
         Examples
@@ -287,7 +287,7 @@ class GurobiInterface(base.BaseSolverInterface):
         self.model.setAttr("LB", variables, value)
         self.model.update()
 
-    def set_variable_ub(self, index, value) -> None:
+    def set_variable_ub(self, index=None, value=None) -> None:
         """Set variable lower bounds
 
         Examples
@@ -541,6 +541,10 @@ class GurobiInterface(base.BaseSolverInterface):
 
     def is_optimal(self) -> bool:
         return self.model.Status == 2
+
+    def assert_optimal(self) -> None:
+        if not self.is_optimal():
+            raise ValueError(f"model.status={self.get_status_name()}")
 
     def get_status_name(self) -> str:
         return solver_status_code_to_status_name[self.model.Status]
