@@ -475,10 +475,10 @@ def _sdp_lmi_cuts_solver(objective_coef, constr_coefs, constr_offset):
 
         coef_v0 = np.sum(constr_coefs * v[:, 0], axis=2)
         coef_v1 = np.sum(constr_coefs * v[:, 1], axis=2)
-        coef_v0v0 = -np.sum(coef_v0 * v[:, 0], axis=1)
-        coef_v0v1 = -np.sum(coef_v0 * v[:, 1], axis=1)
-        coef_v1v1 = -np.sum(coef_v1 * v[:, 1], axis=1)
-        cut_coef = -np.stack([coef_v0v0, coef_v0v1, coef_v1v1])
+        coef_v0v0 = np.sum(coef_v0 * v[:, 0], axis=1)
+        coef_v0v1 = np.sum(coef_v0 * v[:, 1], axis=1)
+        coef_v1v1 = np.sum(coef_v1 * v[:, 1], axis=1)
+        cut_coef = np.stack([coef_v0v0, coef_v0v1, coef_v1v1])
         cut_offset = np.array(
             [
                 v[:, 0] @ constr_offset @ v[:, 0],
