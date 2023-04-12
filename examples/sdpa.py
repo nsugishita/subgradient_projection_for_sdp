@@ -98,7 +98,7 @@ def run_column_generation(problem_data, config):
             eigenvalues.append(w)
             eigenvectors.append(v)
 
-        coef_i = np.argmin([x[0] for x in eigenvalues])
+        coef_i = np.argmin([i[0] for i in eigenvalues])
 
         matrix = matrices[coef_i]
         w = eigenvalues[coef_i]
@@ -148,39 +148,45 @@ def run_column_generation(problem_data, config):
 def add_cuts(
     linear_cuts, lmi_cuts, constr_svec_coef, constr_svec_offset, x, w, v
 ):
-    f = -w[0]
-    v0 = v[:, 0]
-    v1 = v[:, 1]
-    v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
-    # v0v1t = cpsdppy.linalg.svec(v0[:, None] @ v1[None, :])
-    v0v1t = (
-        cpsdppy.linalg.svec(
-            v0[:, None] @ v1[None, :] + v1[:, None] @ v0[None, :]
+    # TODO Improve efficiency using initialisation routine.
+
+    n_linear_cuts = 1
+    n_lmi_cuts = 1
+
+    for i in range(n_linear_cuts):
+        v0 = v[:, 2 * i]
+        v1 = v[:, 2 * i + 1]
+        v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
+        v0v1t = (
+            cpsdppy.linalg.svec(
+                v0[:, None] @ v1[None, :] + v1[:, None] @ v0[None, :]
+            )
+            / 2
         )
-        / 2
-    )
-    v1v1t = cpsdppy.linalg.svec(v1[:, None] @ v1[None, :])
+        v1v1t = cpsdppy.linalg.svec(v1[:, None] @ v1[None, :])
 
-    g = -v0v0t @ constr_svec_coef
+        cut_coef = np.stack(
+            [
+                v0v0t @ constr_svec_coef,
+                v0v1t @ constr_svec_coef,
+                v1v1t @ constr_svec_coef,
+            ]
+        )
+        cut_offset = np.array(
+            [
+                v0v0t @ constr_svec_offset,
+                v0v1t @ constr_svec_offset,
+                v1v1t @ constr_svec_offset,
+            ]
+        )
+        lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
 
-    _offset = -f + g @ x
-    linear_cuts.add_linear_cuts(coef=g, offset=_offset)
-
-    cut_coef = np.stack(
-        [
-            v0v0t @ constr_svec_coef,
-            v0v1t @ constr_svec_coef,
-            v1v1t @ constr_svec_coef,
-        ]
-    )
-    cut_offset = np.array(
-        [
-            v0v0t @ constr_svec_offset,
-            v0v1t @ constr_svec_offset,
-            v1v1t @ constr_svec_offset,
-        ]
-    )
-    lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
+    for i in range(n_linear_cuts):
+        v0 = v[:, i + 2 * n_lmi_cuts]
+        v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
+        cut_coef = v0v0t @ constr_svec_coef
+        cut_offset = v0v0t @ constr_svec_offset
+        linear_cuts.add_linear_cuts(coef=-cut_coef, offset=-cut_offset)
 
 
 def get_lmi_cut_coef(lmi_cuts, constr_coef, constr_offset, v0, v1):
