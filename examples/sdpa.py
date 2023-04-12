@@ -14,8 +14,38 @@ import cpsdppy
 
 logger = logging.getLogger(__name__)
 
+initial_cuts = "lmi"
+n_linear_cuts_per_iteration = 0
+n_lmi_cuts_per_iteration = 3
 
-def add_initial_cuts(lmi_cuts, constr_coef, constr_offset):
+
+def add_initial_linear_cuts(linear_cuts, constr_coef, constr_offset):
+    mat_size = constr_coef[0].shape[0]
+    initial_cuts = []
+    for i in range(mat_size):
+        for j in range(i, mat_size):
+            u = np.zeros(mat_size)
+            u[i] = 1
+            u[j] = 1
+            initial_cuts.append(u)
+
+            if i != j:
+                u = np.zeros(mat_size)
+                u[i] = 1
+                u[j] = -1
+                initial_cuts.append(u)
+
+    initial_cuts = scipy.sparse.csr_array(np.array(initial_cuts))
+
+    coef, offset = get_linear_cut_coef(
+        constr_coef,
+        constr_offset,
+        initial_cuts,
+    )
+    linear_cuts.add_linear_cuts(coef=coef, offset=offset)
+
+
+def add_initial_lmi_cuts(lmi_cuts, constr_coef, constr_offset):
     mat_size = constr_coef[0].shape[0]
     v0 = np.zeros(mat_size)
     v1 = np.zeros(mat_size)
@@ -44,7 +74,6 @@ def add_initial_cuts(lmi_cuts, constr_coef, constr_offset):
     )
 
     coef, offset = get_lmi_cut_coef(
-        lmi_cuts,
         constr_coef,
         constr_offset,
         v0,
@@ -54,6 +83,7 @@ def add_initial_cuts(lmi_cuts, constr_coef, constr_offset):
 
 
 def run_subgradient_projection(problem_data, config):
+    # TODO Make reguarised and unregularised RMP and add cuts on the latter.
     model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
     lb = problem_data["variable_lb"]
     ub = problem_data["variable_ub"]
@@ -73,10 +103,16 @@ def run_subgradient_projection(problem_data, config):
     constr_svec_coefs = problem_data["lmi_svec_constraint_coefficient"]
     constr_svec_offset = problem_data["lmi_svec_constraint_offset"]
 
+    assert initial_cuts in ["linear", "lmi", "", None]
     for coef_i in range(len(constr_svec_coefs)):
-        add_initial_cuts(
-            lmi_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
-        )
+        if initial_cuts == "linear":
+            add_initial_linear_cuts(
+                linear_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
+            )
+        elif initial_cuts == "lmi":
+            add_initial_lmi_cuts(
+                lmi_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
+            )
 
     x_list = []
 
@@ -167,7 +203,7 @@ def run_column_generation(problem_data, config):
     constr_svec_offset = problem_data["lmi_svec_constraint_offset"]
 
     for coef_i in range(len(constr_svec_coefs)):
-        add_initial_cuts(
+        add_initial_lmi_cuts(
             lmi_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
         )
 
@@ -247,10 +283,7 @@ def add_cuts(
 ):
     # TODO Improve efficiency using initialisation routine.
 
-    n_linear_cuts = 1
-    n_lmi_cuts = 1
-
-    for i in range(n_linear_cuts):
+    for i in range(n_lmi_cuts_per_iteration):
         v0 = v[:, 2 * i]
         v1 = v[:, 2 * i + 1]
         v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
@@ -278,15 +311,68 @@ def add_cuts(
         )
         lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
 
-    for i in range(n_linear_cuts):
-        v0 = v[:, i + 2 * n_lmi_cuts]
+    for i in range(n_linear_cuts_per_iteration):
+        v0 = v[:, i + 2 * n_lmi_cuts_per_iteration]
         v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
         cut_coef = v0v0t @ constr_svec_coef
         cut_offset = v0v0t @ constr_svec_offset
         linear_cuts.add_linear_cuts(coef=-cut_coef, offset=-cut_offset)
 
+    # TODO Add combination cuts.
 
-def get_lmi_cut_coef(lmi_cuts, constr_coef, constr_offset, v0, v1):
+
+def get_linear_cut_coef(constr_coef, constr_offset, v):
+    assert isinstance(v, scipy.sparse.spmatrix)
+
+    if (
+        isinstance(constr_coef, list)
+        and (len(constr_coef) > 0)
+        and isinstance(constr_coef[0], scipy.sparse.spmatrix)
+    ):
+        constr_coef = np.array([x.toarray() for x in constr_coef])
+        constr_offset = constr_offset.toarray()
+
+    if v.shape[1] == 1:
+        v = v.T
+
+    n_cuts = v.shape[0]
+
+    v = v.tocsr()
+
+    coefs = []
+    offsets = []
+
+    for i in range(n_cuts):
+        col = v.indices[v.indptr[i] : v.indptr[i + 1]]
+        val = v.data[v.indptr[i] : v.indptr[i + 1]]
+        n = col.size
+
+        col0 = np.repeat(col, n)
+        val0 = np.repeat(val, n)
+        col1 = np.tile(col, n)
+        val1 = np.tile(val, n)
+
+        coefs.append(
+            np.sum(
+                val0[None, :] * val1[None, :] * constr_coef[:, col0, col1],
+                axis=1,
+            )
+        )
+        offsets.append(
+            np.sum(
+                val0[None, :] * val1[None, :] * constr_offset[col0, col1],
+            )
+        )
+
+    coefs = np.stack(coefs)
+    offsets = np.array(offsets)
+    np.testing.assert_equal(coefs.ndim, 2)
+    np.testing.assert_equal(offsets.shape, (n_cuts,))
+
+    return -coefs, -offsets
+
+
+def get_lmi_cut_coef(constr_coef, constr_offset, v0, v1):
     assert isinstance(v0, scipy.sparse.spmatrix)
 
     if (
@@ -317,11 +403,13 @@ def get_lmi_cut_coef(lmi_cuts, constr_coef, constr_offset, v0, v1):
         val1 = v1.data[v1.indptr[i] : v1.indptr[i + 1]]
         n1 = col1.size
 
+        # TODO CHECK
         col0 = np.repeat(col0, n1)
         val0 = np.repeat(val0, n1)
         col1 = np.tile(col1, n0)
         val1 = np.tile(val1, n0)
 
+        # TODO CHECK
         coefs.extend(
             [
                 np.sum(
