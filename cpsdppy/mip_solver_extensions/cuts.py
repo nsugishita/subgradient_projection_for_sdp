@@ -298,12 +298,12 @@ class LMICuts:
                     new_quadratic_constraint_index,
                 ]
             )
-            self.last_active_iteration = np.concatenate(
-                [
-                    self.last_active_iteration,
-                    np.full(n_new_cuts, self.iteration),
-                ]
-            )
+        self.last_active_iteration = np.concatenate(
+            [
+                self.last_active_iteration,
+                np.full(n_new_cuts, self.iteration),
+            ]
+        )
         logger.debug(f"{self.__class__.__name__} added {n_new_cuts} cuts")
 
     def remove_variables_hook(self, model, index):
