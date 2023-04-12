@@ -106,7 +106,7 @@ class MoreuYoshidaRegularisation:
         if model.is_optimal():
             return
         self.step_size /= 2
-        return model.code_resolve
+        return True
 
     def solve_exit_hook(self, model):
         logger.debug(f"{self.__class__.__name__} exithook")
