@@ -185,10 +185,6 @@ def add_lmi_cuts(lmi_cuts, constr_svec_coef, constr_svec_offset, v0, v1):
 
     if isinstance(v0, scipy.sparse.spmatrix):
         sparse = True
-        if not isinstance(constr_svec_coef, scipy.sparse.spmatrix):
-            constr_svec_coef = scipy.sparse.csr_array(constr_svec_coef)
-        else:
-            constr_svec_coef = constr_svec_coef.tocsr()
     else:
         sparse = False
 
