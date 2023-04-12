@@ -4,7 +4,6 @@
 
 # TODO Use config to set memory.
 # TODO Log time etc.
-# TODO Implement subgradient projection.
 
 import logging
 
@@ -54,6 +53,104 @@ def add_initial_cuts(lmi_cuts, constr_coef, constr_offset):
     lmi_cuts.add_lmi_cuts(coef=coef, offset=offset)
 
 
+def run_subgradient_projection(problem_data, config):
+    model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
+    lb = problem_data["variable_lb"]
+    ub = problem_data["variable_ub"]
+    objective_coef = problem_data["objective_coefficient"]
+    model.add_variables(lb=lb, ub=ub, obj=objective_coef)
+
+    reg = cpsdppy.mip_solver_extensions.MoreuYoshidaRegularisation(
+        model, config=None
+    )
+    reg.step_size = 100  # TODO
+    linear_cuts = cpsdppy.mip_solver_extensions.LinearCuts(model)
+    lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(model)
+    n_variables = model.get_n_variables()
+
+    constr_coefs = problem_data["lmi_constraint_coefficient"]
+    constr_offsets = problem_data["lmi_constraint_offset"]
+    constr_svec_coefs = problem_data["lmi_svec_constraint_coefficient"]
+    constr_svec_offset = problem_data["lmi_svec_constraint_offset"]
+
+    for coef_i in range(len(constr_svec_coefs)):
+        add_initial_cuts(
+            lmi_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
+        )
+
+    x_list = []
+
+    x = np.zeros(n_variables)
+
+    for iteration in range(20):
+        linear_cuts.iteration = iteration
+        lmi_cuts.iteration = iteration
+
+        matrices = []
+        eigenvectors = []
+        eigenvalues = []
+
+        for coef_i in range(len(constr_svec_coefs)):
+            matrix = cpsdppy.linalg.svec_inv(
+                constr_svec_coefs[coef_i] @ x - constr_svec_offset[coef_i],
+                part="f",
+            )
+            matrices.append(matrix)
+            w, v = np.linalg.eigh(matrix)
+            eigenvalues.append(w)
+            eigenvectors.append(v)
+
+        coef_i = np.argmin([i[0] for i in eigenvalues])
+
+        matrix = matrices[coef_i]
+        w = eigenvalues[coef_i]
+        v = eigenvectors[coef_i]
+
+        add_cuts(
+            linear_cuts,
+            lmi_cuts,
+            constr_svec_coefs[coef_i],
+            constr_svec_offset[coef_i],
+            x,
+            w,
+            v,
+        )
+
+        obj = objective_coef @ x
+        constr = -w[0]
+        n_linear_cuts = linear_cuts.n
+        n_lmi_cuts = lmi_cuts.n
+
+        x = reg.project(x)
+
+        x = reg.prox(x)
+
+        if iteration == 0:
+            logger.info(
+                f"{'it':>3s} "
+                f"{'obj':>9s} {'constr':>9s} "
+                f"{'|x|inf':>9s} "
+                f"{'lnrcuts'} {'lmicuts'}"
+            )
+        logger.info(
+            f"{iteration + 1:3d} "
+            f"{cpsdppy.utils.format_number(obj)} "
+            f"{cpsdppy.utils.format_number(constr)} "
+            f"{cpsdppy.utils.format_number(np.linalg.norm(x, ord=np.inf))} "
+            f"{n_linear_cuts:7d} {n_lmi_cuts:7d}"
+        )
+
+        if constr <= 1e-6:
+            break
+
+    return {
+        "x_list": x_list,
+        "linear_cuts": linear_cuts,
+        "constr_svec_coefs": constr_svec_coefs,
+        "constr_svec_offset": constr_svec_offset,
+    }
+
+
 def run_column_generation(problem_data, config):
     model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
     lb = problem_data["variable_lb"]
@@ -76,7 +173,7 @@ def run_column_generation(problem_data, config):
 
     x_list = []
 
-    for iteration in range(1000):
+    for iteration in range(100):
         linear_cuts.iteration = iteration
         lmi_cuts.iteration = iteration
         model.solve()
@@ -273,7 +370,8 @@ def main():
     # problem_data = cpsdppy.toy.get("b")
     # problem_data = cpsdppy.toy.get("d")
     config = {}
-    run_column_generation(problem_data, config)
+    # run_column_generation(problem_data, config)
+    run_subgradient_projection(problem_data, config)
 
 
 if __name__ == "__main__":
