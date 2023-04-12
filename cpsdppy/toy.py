@@ -122,6 +122,9 @@ def get(problem_name, config=None):
             dtype=float,
         )
 
+    else:
+        raise ValueError(f"unknown problem name: {problem_name}")
+
     constr_coefs = np.stack([a, b])
     constr_offset = c
     constr_svec_coefs = np.stack(
