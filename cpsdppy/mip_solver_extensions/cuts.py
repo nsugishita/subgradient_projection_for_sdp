@@ -130,7 +130,7 @@ class LinearCuts:
         indexremove.remove(self.linear_constraint_index.ravel(), index.ravel())
 
     def solve_enter_hook(self, model):
-        memory = 10
+        memory = 1000
         buf = self.last_active_iteration <= self.iteration - memory
         dropped = np.nonzero(buf)[0]
         kept = np.nonzero(~buf)[0]
@@ -145,10 +145,11 @@ class LinearCuts:
         logger.debug(f"{self.__class__.__name__} removed {dropped.size} cuts")
 
     def solve_exit_hook(self, model):
+        model.assert_optimal()
         slacks = model.get_linear_constraint_slacks()[
             self.linear_constraint_index
         ]
-        self.last_active_iteration[np.abs(slacks) >= 1e-6] = self.iteration
+        self.last_active_iteration[np.abs(slacks) <= 1e-6] = self.iteration
 
 
 class LMICuts:
@@ -229,8 +230,10 @@ class LMICuts:
         coef[i] x - offset[i] : PSDCone
         ```
         """
-        if coef.ndim == 2:
+        if isinstance(coef, np.ndarray) and coef.ndim == 2:
             coef = coef[None]
+        if isinstance(coef, scipy.sparse.spmatrix):
+            coef = [coef]
         offset = np.atleast_2d(offset)
         n_new_cuts = len(coef)
         self.n += n_new_cuts
@@ -238,7 +241,9 @@ class LMICuts:
 
         for _coef, _offset in zip(coef, offset):
             n = model.get_n_variables()
-            Z = np.zeros((3, n - _coef.shape[1]))
+            Z = scipy.sparse.csr_array(
+                ([], ([], [])), shape=(3, n - _coef.shape[1])
+            )
             (
                 new_variable_index,
                 new_quadratic_constraint_index,
@@ -262,9 +267,7 @@ class LMICuts:
                     ],
                 ]
             )
-            CZD = np.concatenate([_coef, Z, D], axis=1)
-            # coef = scipy.sparse.vstack([_coef, D])
-            coef = scipy.sparse.csr_array(CZD)
+            coef = scipy.sparse.hstack([_coef, Z, D])
             new_linear_constraint_index = model.add_linear_constraints(
                 shape=3, coef=coef, sense="E", rhs=_offset
             )
@@ -315,7 +318,7 @@ class LMICuts:
         )
 
     def solve_enter_hook(self, model):
-        memory = 10
+        memory = 10000
         buf = self.last_active_iteration <= self.iteration - memory
         dropped = np.nonzero(buf)[0]
         kept = np.nonzero(~buf)[0]
@@ -339,6 +342,7 @@ class LMICuts:
         logger.debug(f"{self.__class__.__name__} removed {dropped.size} cuts")
 
     def solve_exit_hook(self, model):
+        model.assert_optimal()
         slacks = np.empty(self.n)
         x = model.get_solution()[: self.n_variables]
         svec = (self.coef @ x).reshape(-1, 3) + self.offset
@@ -349,7 +353,7 @@ class LMICuts:
             matrix[1, 0] = matrix[0, 1] = c
             w, v = np.linalg.eigh(matrix)
             slacks[i] = w[0]
-        self.last_active_iteration[np.abs(slacks) >= 1e-6] = self.iteration
+        self.last_active_iteration[slacks <= 1e-6] = self.iteration
 
 
 if __name__ == "__main__":
