@@ -70,7 +70,7 @@ class MoreuYoshidaRegularisation:
         original_coefs = self.obj_coefs
         self.obj_coefs = np.zeros_like(self.obj_coefs)
         model.solve()
-        x = model.get_solution()
+        x = model.get_solution()[: len(x)]
         self.obj_coefs = original_coefs
         return x
 
@@ -80,7 +80,7 @@ class MoreuYoshidaRegularisation:
             self.set_proximal_centre(x)
         model = self.model()
         model.solve()
-        x = model.get_solution()
+        x = model.get_solution()[: self.proximal_centre.size]
         return x
 
     def set_proximal_centre(self, x):
@@ -96,7 +96,7 @@ class MoreuYoshidaRegularisation:
         centre = self.proximal_centre
         c = self.obj_coefs
         ss_inv = 1 / (2 * ss)
-        vars = np.array(model.model.getVars())
+        vars = np.array(model.model.getVars())[: centre.size]
         model.model.setObjective(
             c @ vars + ss_inv * (vars - centre) @ (vars - centre)
         )
