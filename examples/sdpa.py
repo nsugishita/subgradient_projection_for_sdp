@@ -23,6 +23,8 @@ def add_initial_cuts(lmi_cuts, constr_svec_coef, constr_svec_offset):
     )
     v0 = np.zeros(mat_size)
     v1 = np.zeros(mat_size)
+    coef_list = []
+    offset_list = []
     for i in range(mat_size):
         for j in range(i + 1, mat_size):
             row = [i]
@@ -33,21 +35,26 @@ def add_initial_cuts(lmi_cuts, constr_svec_coef, constr_svec_offset):
             col = [0]
             val = [1]
             v1 = scipy.sparse.coo_array((val, (row, col)), shape=(mat_size, 1))
-            add_lmi_cuts(
+            coef, offset = get_lmi_cut_coef(
                 lmi_cuts,
                 constr_svec_coef,
                 constr_svec_offset,
                 v0,
                 v1,
             )
-
-            add_lmi_cuts(
+            coef_list.append(coef)
+            offset_list.append(offset)
+            coef, offset = get_lmi_cut_coef(
                 lmi_cuts,
                 constr_svec_coef,
                 constr_svec_offset,
                 v0,
                 -v1,
             )
+            coef_list.append(coef)
+            offset_list.append(offset)
+    offset_list = np.array(offset_list)
+    lmi_cuts.add_lmi_cuts(coef=coef_list, offset=offset_list)
 
 
 def run_column_generation(problem_data, config):
@@ -177,7 +184,7 @@ def add_cuts(
     lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
 
 
-def add_lmi_cuts(lmi_cuts, constr_svec_coef, constr_svec_offset, v0, v1):
+def get_lmi_cut_coef(lmi_cuts, constr_svec_coef, constr_svec_offset, v0, v1):
     if isinstance(v0, np.ndarray):
         v0 = v0.ravel()[:, None]
     if isinstance(v1, np.ndarray):
@@ -226,7 +233,9 @@ def add_lmi_cuts(lmi_cuts, constr_svec_coef, constr_svec_offset, v0, v1):
                 v1v1t @ constr_svec_offset,
             ]
         )
-    lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
+
+    # lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
+    return cut_coef, cut_offset
 
 
 def main():
@@ -239,7 +248,7 @@ def main():
     # problem_data = cpsdppy.sdpa.read("control1.dat-s")
     # problem_data = get_problem_data("a")
     # problem_data = get_problem_data("b")
-    problem_data = cpsdppy.toy.get("d")
+    # problem_data = cpsdppy.toy.get("d")
     config = {}
     run_column_generation(problem_data, config)
 
