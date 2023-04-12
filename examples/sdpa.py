@@ -2,7 +2,6 @@
 
 """Solve SDPA using column generation"""
 
-# TODO Improve addition of initial cuts.
 # TODO Use config to set memory.
 # TODO Log time etc.
 # TODO Implement subgradient projection.
@@ -17,44 +16,42 @@ import cpsdppy
 logger = logging.getLogger(__name__)
 
 
-def add_initial_cuts(lmi_cuts, constr_svec_coef, constr_svec_offset):
-    mat_size = cpsdppy.linalg.from_svec_size_to_original_size(
-        constr_svec_offset.size
-    )
+def add_initial_cuts(lmi_cuts, constr_coef, constr_offset):
+    mat_size = constr_coef[0].shape[0]
     v0 = np.zeros(mat_size)
     v1 = np.zeros(mat_size)
-    coef_list = []
-    offset_list = []
-    for i in range(mat_size):
-        for j in range(i + 1, mat_size):
-            row = [i]
-            col = [0]
-            val = [1]
-            v0 = scipy.sparse.coo_array((val, (row, col)), shape=(mat_size, 1))
-            row = [j]
-            col = [0]
-            val = [1]
-            v1 = scipy.sparse.coo_array((val, (row, col)), shape=(mat_size, 1))
-            coef, offset = get_lmi_cut_coef(
-                lmi_cuts,
-                constr_svec_coef,
-                constr_svec_offset,
-                v0,
-                v1,
-            )
-            coef_list.append(coef)
-            offset_list.append(offset)
-            coef, offset = get_lmi_cut_coef(
-                lmi_cuts,
-                constr_svec_coef,
-                constr_svec_offset,
-                v0,
-                -v1,
-            )
-            coef_list.append(coef)
-            offset_list.append(offset)
-    offset_list = np.array(offset_list)
-    lmi_cuts.add_lmi_cuts(coef=coef_list, offset=offset_list)
+
+    v0_col = np.repeat(np.arange(mat_size - 1), np.arange(mat_size - 1, 0, -1))
+    v0_row = np.arange(v0_col.size)
+    v0_val = np.ones_like(v0_row, dtype=float)
+    v1_col = np.concatenate(
+        [np.arange(i + 1, mat_size) for i in range(mat_size)]
+    )
+    v1_row = np.arange(v1_col.size)
+    v1_val = np.ones_like(v1_row, dtype=float)
+
+    v0_row = np.concatenate([v0_row, v0_row + v0_row.max() + 1])
+    v0_col = np.concatenate([v0_col, v0_col])
+    v0_val = np.concatenate([v0_val, v0_val])
+    v1_row = np.concatenate([v1_row, v1_row + v1_row.max() + 1])
+    v1_col = np.concatenate([v1_col, v1_col])
+    v1_val = np.concatenate([v1_val, -v1_val])
+
+    v0 = scipy.sparse.csr_matrix(
+        (v0_val, (v0_row, v0_col)), shape=(v0_row.size, mat_size), dtype=int
+    )
+    v1 = scipy.sparse.csr_matrix(
+        (v1_val, (v1_row, v1_col)), shape=(v0_row.size, mat_size), dtype=int
+    )
+
+    coef, offset = get_lmi_cut_coef(
+        lmi_cuts,
+        constr_coef,
+        constr_offset,
+        v0,
+        v1,
+    )
+    lmi_cuts.add_lmi_cuts(coef=coef, offset=offset)
 
 
 def run_column_generation(problem_data, config):
@@ -67,12 +64,14 @@ def run_column_generation(problem_data, config):
     lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(model)
     n_variables = model.get_n_variables()
 
+    constr_coefs = problem_data["lmi_constraint_coefficient"]
+    constr_offsets = problem_data["lmi_constraint_offset"]
     constr_svec_coefs = problem_data["lmi_svec_constraint_coefficient"]
     constr_svec_offset = problem_data["lmi_svec_constraint_offset"]
 
     for coef_i in range(len(constr_svec_coefs)):
         add_initial_cuts(
-            lmi_cuts, constr_svec_coefs[coef_i], constr_svec_offset[coef_i]
+            lmi_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
         )
 
     x_list = []
@@ -184,58 +183,76 @@ def add_cuts(
     lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
 
 
-def get_lmi_cut_coef(lmi_cuts, constr_svec_coef, constr_svec_offset, v0, v1):
-    if isinstance(v0, np.ndarray):
-        v0 = v0.ravel()[:, None]
-    if isinstance(v1, np.ndarray):
-        v1 = v1.ravel()[:, None]
+def get_lmi_cut_coef(lmi_cuts, constr_coef, constr_offset, v0, v1):
+    assert isinstance(v0, scipy.sparse.spmatrix)
 
-    if isinstance(v0, scipy.sparse.spmatrix):
-        sparse = True
-    else:
-        sparse = False
+    if (
+        isinstance(constr_coef, list)
+        and (len(constr_coef) > 0)
+        and isinstance(constr_coef[0], scipy.sparse.spmatrix)
+    ):
+        constr_coef = np.array([x.toarray() for x in constr_coef])
+        constr_offset = constr_offset.toarray()
 
-    v0v0t = cpsdppy.linalg.svec(v0 @ v0.T)
-    # v0v1t = cpsdppy.linalg.svec(v0[:, None] @ v1[None, :])
-    v0v1t = cpsdppy.linalg.svec(v0 @ v1.T + v1 @ v0.T) / 2
-    v1v1t = cpsdppy.linalg.svec(v1 @ v1.T)
+    if v0.shape[1] == 1:
+        v0 = v0.T
+        v1 = v1.T
 
-    if sparse:
-        v0v0t = v0v0t.T
-        v0v1t = v0v1t.T
-        v1v1t = v1v1t.T
+    n_cuts = v0.shape[0]
 
-    cut_coef = [
-        v0v0t @ constr_svec_coef,
-        v0v1t @ constr_svec_coef,
-        v1v1t @ constr_svec_coef,
-    ]
+    v0 = v0.tocsr()
+    v1 = v1.tocsr()
 
-    if isinstance(cut_coef[0], scipy.sparse.spmatrix):
-        stack_func = scipy.sparse.vstack
-    else:
-        stack_func = np.stack
+    coefs = []
+    offsets = []
 
-    cut_coef = stack_func(cut_coef)
-    if sparse:
-        cut_offset = np.array(
+    for i in range(n_cuts):
+        col0 = v0.indices[v0.indptr[i] : v0.indptr[i + 1]]
+        val0 = v0.data[v0.indptr[i] : v0.indptr[i + 1]]
+        n0 = col0.size
+        col1 = v1.indices[v1.indptr[i] : v1.indptr[i + 1]]
+        val1 = v1.data[v1.indptr[i] : v1.indptr[i + 1]]
+        n1 = col1.size
+
+        col0 = np.repeat(col0, n1)
+        val0 = np.repeat(val0, n1)
+        col1 = np.tile(col1, n0)
+        val1 = np.tile(val1, n0)
+
+        coefs.extend(
             [
-                (v0v0t @ constr_svec_offset).item(),
-                (v0v1t @ constr_svec_offset).item(),
-                (v1v1t @ constr_svec_offset).item(),
+                np.sum(
+                    val0[:, None] * val0[:, None] * constr_coef[:, col0, col0],
+                    axis=1,
+                ),
+                np.sum(
+                    val0[:, None] * val1[:, None] * constr_coef[:, col0, col1],
+                    axis=1,
+                ),
+                np.sum(
+                    val1[:, None] * val1[:, None] * constr_coef[:, col1, col1],
+                    axis=1,
+                ),
             ]
         )
-    else:
-        cut_offset = np.array(
+        offsets.extend(
             [
-                v0v0t @ constr_svec_offset,
-                v0v1t @ constr_svec_offset,
-                v1v1t @ constr_svec_offset,
+                np.sum(
+                    val0[:, None] * val0[:, None] * constr_offset[col0, col0],
+                ),
+                np.sum(
+                    val0[:, None] * val1[:, None] * constr_offset[col0, col1],
+                ),
+                np.sum(
+                    val1[:, None] * val1[:, None] * constr_offset[col1, col1],
+                ),
             ]
         )
 
-    # lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
-    return cut_coef, cut_offset
+    coefs = np.array(coefs).reshape(n_cuts, 3, -1)
+    offsets = np.array(offsets).reshape(n_cuts, 3)
+
+    return coefs, offsets
 
 
 def main():
@@ -246,8 +263,8 @@ def main():
 
     problem_data = cpsdppy.sdpa.read("theta1.dat-s")
     # problem_data = cpsdppy.sdpa.read("control1.dat-s")
-    # problem_data = get_problem_data("a")
-    # problem_data = get_problem_data("b")
+    # problem_data = cpsdppy.toy.get("a")
+    # problem_data = cpsdppy.toy.get("b")
     # problem_data = cpsdppy.toy.get("d")
     config = {}
     run_column_generation(problem_data, config)
