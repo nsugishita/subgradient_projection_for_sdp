@@ -231,7 +231,7 @@ def svec(a, *args, **kwargs):
 
     >>> coo = svec(scipy.sparse.coo_array(x))
     >>> coo
-    <10x1 sparse matrix of type '<class 'numpy.float64'>'
+    <10x1 sparse array of type '<class 'numpy.float64'>'
         with 7 stored elements in COOrdinate format>
     >>> coo.toarray().ravel().round(4)
     array([1.    , 1.4142, 2.    , 0.    , 2.8284, 4.    , 0.    , 2.8284,
@@ -372,6 +372,9 @@ def _svec_scipy_sparse_row_major(a, format=None, coef=None):
     if coef is None:
         coef = np.sqrt(2)
 
+    original_type = a.__class__
+    a = a.tocoo()
+
     if format is not None:
         raise NotImplementedError("format != None is not yet supported")
     if isinstance(a, scipy.sparse.coo_matrix):
@@ -399,10 +402,7 @@ def _svec_scipy_sparse_row_major(a, format=None, coef=None):
         res = scipy.sparse.coo_matrix(
             (new_data, (new_row, new_col)), shape=(new_n_rows, 1)
         )
-        if format is None:
-            return res
-        else:
-            return res.asformat(format)
+        return original_type(res, shape=res.shape)
 
     else:
         raise NotImplementedError(f"unsupported type: {type(a)}")
@@ -411,6 +411,9 @@ def _svec_scipy_sparse_row_major(a, format=None, coef=None):
 def _svec_scipy_sparse_column_major(a, format=None, coef=None):
     if coef is None:
         coef = np.sqrt(2)
+
+    original_type = a.__class__
+    a = a.tocoo()
 
     if format is not None:
         raise NotImplementedError("format != None is not yet supported")
@@ -441,10 +444,7 @@ def _svec_scipy_sparse_column_major(a, format=None, coef=None):
         res = scipy.sparse.coo_matrix(
             (new_data, (new_row, new_col)), shape=(new_n_rows, 1)
         )
-        if format is None:
-            return res
-        else:
-            return res.asformat(format)
+        return original_type(res, shape=res.shape)
 
     else:
         raise NotImplementedError(f"unsupported type: {type(a)}")
