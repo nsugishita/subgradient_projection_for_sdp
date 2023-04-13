@@ -2,10 +2,11 @@
 
 """Solve SDPA using column generation"""
 
-# TODO Log time etc.
+# TODO Track the objective values of the iterates besides the lower bound.
 # TODO Improve performance of the solver. Check step size adjustament.
 
 import logging
+import os
 
 import numpy as np
 import scipy.sparse
@@ -87,6 +88,29 @@ def add_initial_lmi_cuts(lmi_cuts, constr_coef, constr_offset):
 
 
 def run_subgradient_projection(problem_data, config):
+    n_variables = problem_data["objective_coefficient"].size
+
+    journal = utils.IterationJournal()
+    journal.start_hook()
+    timer = utils.timer()
+
+    def remaining_time():
+        if config.time_limit is None:
+            return np.inf
+        if config.time_limit <= 0:
+            return np.inf
+        if not np.isfinite(config.time_limit):
+            return np.inf
+        return config.time_limit - timer.walltime
+
+    journal.register_iteration_items(
+        lb=dict(default=np.nan, timing=True),
+        best_lb=dict(default=np.nan, timing=True),
+        gap=dict(default=np.nan, timing=True),
+        step_size=dict(default=np.nan, timing=False),
+        solution=dict(default=np.full(n_variables, np.nan), timing=False),
+    )
+
     regularised_model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
     unregularised_model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
     lb = problem_data["variable_lb"]
@@ -107,7 +131,6 @@ def run_subgradient_projection(problem_data, config):
     )
     reg_lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(regularised_model)
     unreg_lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(unregularised_model)
-    n_variables = regularised_model.get_n_variables()
 
     constr_coefs = problem_data["lmi_constraint_coefficient"]
     constr_offsets = problem_data["lmi_constraint_offset"]
@@ -125,7 +148,6 @@ def run_subgradient_projection(problem_data, config):
                 unreg_lmi_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
             )
 
-    x_list = []
     best_lower_bound = -np.inf
 
     x = np.zeros(n_variables)
@@ -140,6 +162,7 @@ def run_subgradient_projection(problem_data, config):
         #     solver_status = "time_limit"
         #     break
 
+        journal.iteration_start_hook(iteration)
         reg_linear_cuts.iteration = iteration
         reg_lmi_cuts.iteration = iteration
         unreg_linear_cuts.iteration = iteration
@@ -206,6 +229,16 @@ def run_subgradient_projection(problem_data, config):
 
         x = reg.prox(x)
 
+        _gap = gap(best_lower_bound, config.target_objective)
+
+        journal.set_iteration_items(
+            lb=lower_bound,
+            best_lb=best_lower_bound,
+            gap=_gap,
+            step_size=reg.step_size,
+            solution=x,
+        )
+
         head = [
             f"{'it':>3s}",
             f"  {'elapse':>8s}",
@@ -216,15 +249,13 @@ def run_subgradient_projection(problem_data, config):
             f"  {'viol':>8s}",
         ]
         lower_bound_symbol = " "
-        _gap = gap(best_lower_bound, config.target_objective)
         n_rcuts = n_reg_linear_cuts + n_reg_lmi_cuts
         n_ucuts = n_unreg_linear_cuts + n_unreg_lmi_cuts
         violation = constr
         body = [
             f"{iteration:3d}",
             "  ",
-            # utils.format_elapse(timer.walltime),
-            f"{'-':>8s}",
+            utils.format_elapse(timer.walltime),
             f"  {utils.format_number(lower_bound, width=11)}",
             lower_bound_symbol,
             f" {utils.format_number(_gap * 100, width=11)}",
@@ -241,17 +272,32 @@ def run_subgradient_projection(problem_data, config):
         if (
             np.isfinite(_gap)
             and (0 <= _gap <= config.tol)
-            and (constr <= 1e-4)
+            and (constr <= 1e-3)
         ):
             solver_status = "gap_closed"
             break
 
-    return {
-        "solver_status": solver_status,
-        "x_list": x_list,
-        "constr_svec_coefs": constr_svec_coefs,
-        "constr_svec_offset": constr_svec_offset,
-    }
+    result = dict()
+    result.update(
+        dict(
+            algorithm="subgradient_projection",
+            hostname=os.uname()[1],
+            solver_status=solver_status,
+            lb=np.nanmax(journal.get_all("lb")),
+            walltime=timer.walltime,
+            proctime=timer.proctime,
+            n_iterations=len(journal.get_all("lb")),
+            target_objective=config.target_objective,
+            stepsize=config.step_size,
+            time_limit=config.time_limit,
+            iteration_limit=config.iteration_limit,
+        )
+    )
+    journal.dump_data(out=result)
+    timer.dump_data(out=result)
+    for key in result:
+        result[key] = np.asarray(result[key])
+    return result
 
 
 def run_column_generation(problem_data, config):
@@ -280,7 +326,6 @@ def run_column_generation(problem_data, config):
                 lmi_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
             )
 
-    x_list = []
     best_lower_bound = -np.inf
 
     for iteration in range(config.iteration_limit):
@@ -344,20 +389,18 @@ def run_column_generation(problem_data, config):
             f"{utils.format_number(np.linalg.norm(x, ord=np.inf))} "
             f"{n_linear_cuts:7d} {n_lmi_cuts:7d}"
         )
-        x_list.append(x)
 
         _gap = gap(best_lower_bound, config.target_objective)
         if (
             np.isfinite(_gap)
             and (0 <= _gap <= config.tol)
-            and (constr <= 1e-4)
+            and (constr <= 1e-3)
         ):
             solver_status = "gap_closed"
             break
 
     return {
         "solver_status": solver_status,
-        "x_list": x_list,
         "linear_cuts": linear_cuts,
         "constr_svec_coefs": constr_svec_coefs,
         "constr_svec_offset": constr_svec_offset,
@@ -558,7 +601,7 @@ def main() -> None:
     config.eigenvector_combination_cut = 0
     config.n_lmi_cuts_for_unregularised_rmp = 0
     config.n_lmi_cuts_for_regularised_rmp = 0
-    config.step_size = 1
+    config.step_size = 100
     config.target_objective = 23
 
     handler = logging.StreamHandler()
