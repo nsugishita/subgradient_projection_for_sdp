@@ -234,10 +234,11 @@ def sdp_linear_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
 
     fig, ax = plt.subplots()
     ax.axis("equal")
-    ax.axhline(-2, lw=1, color="C0")
-    ax.axhline(2, lw=1, color="C0")
-    ax.axvline(-2, lw=1, color="C0")
-    ax.axvline(2, lw=1, color="C0")
+    box_color = "lightgray"
+    ax.axhline(-2, lw=1, color=box_color)
+    ax.axhline(2, lw=1, color=box_color)
+    ax.axvline(-2, lw=1, color=box_color)
+    ax.axvline(2, lw=1, color=box_color)
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
@@ -278,7 +279,7 @@ def sdp_linear_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
 
     os.makedirs("tmp", exist_ok=True)
     figpath = f"{plot_dir}/sdp_linear_cut_{problem_name}.pdf"
-    fig.savefig(figpath, dpi=300)
+    fig.savefig(figpath, dpi=300, transparent=True)
     fig.savefig(figpath.replace("pdf", "png"), dpi=300)
     print(figpath)
 
@@ -297,13 +298,6 @@ def sdp_lmi_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
     ax.axvline(-2, lw=1, color=box_color)
     ax.axvline(2, lw=1, color=box_color)
 
-    fig_it_by_it, ax_it_by_it = plt.subplots(2, 2)
-    for _ax in ax_it_by_it.ravel():
-        _ax.axhline(-2, lw=1, color=box_color)
-        _ax.axhline(2, lw=1, color=box_color)
-        _ax.axvline(-2, lw=1, color=box_color)
-        _ax.axvline(2, lw=1, color=box_color)
-
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     px = np.linspace(*xlim, grid_size)
@@ -312,8 +306,6 @@ def sdp_lmi_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
     for iteration, x in enumerate(x_list):
         iterate_color = "C0"
         ax.plot(x[0], x[1], "o", markersize=4, color=iterate_color)
-        _ax = ax_it_by_it.ravel()[iteration]
-        _ax.plot(x[0], x[1], "o", markersize=4, color=iterate_color)
 
     for i in range(lmi_cuts.n):
         _C = lmi_cuts.coef[3 * i : 3 * i + 3]
@@ -327,11 +319,8 @@ def sdp_lmi_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
                 det.append(buf)
         det = np.array(det).reshape(px.size, py.size)
 
-        color = mpl.colors.to_rgb(f"C{i + 1}")
-        if i < ax_it_by_it.size - 1:
-            plot_lmi_cut_line(ax, px, py, det, color=color)
-            for _ax in ax_it_by_it.ravel()[i + 1 :]:
-                plot_lmi_cut_line(_ax, px, py, det, color=color)
+        color = "C0"
+        plot_lmi_cut_line(ax, px, py, det, color=color)
 
     det = []
     for _y in py:
@@ -345,36 +334,18 @@ def sdp_lmi_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
     ax.contour(
         px, py, det, levels=[0], colors=[feasible_region_color], linewidths=1
     )
-    for i, _ax in enumerate(ax_it_by_it.ravel()):
-        _ax.contour(
-            px,
-            py,
-            det,
-            levels=[0],
-            colors=[feasible_region_color],
-            linewidths=1,
-        )
-        _ax.set_xlim(*xlim)
-        _ax.set_ylim(*ylim)
-        _ax.set_title(f"iteration {i + 1}")
-        _ax.axis("equal")
-    for _ax in ax_it_by_it[0, :]:
-        _ax.set_xticklabels([])
     ax.axis("equal")
 
     figpath = f"{plot_dir}/sdp_lmi_cut_{problem_name}.pdf"
-    fig.savefig(figpath, dpi=300)
+    fig.savefig(figpath, dpi=300, transparent=True)
     fig.savefig(figpath.replace("pdf", "png"), dpi=300)
-    print(figpath)
-
-    figpath = f"{plot_dir}/sdp_lmi_cut_it_by_it_{problem_name}.pdf"
-    fig_it_by_it.savefig(figpath, dpi=300)
-    fig_it_by_it.savefig(figpath.replace("pdf", "png"), dpi=300)
     print(figpath)
 
 
 def plot_lmi_cut_line(ax, px, py, matrix, color):
-    ax.contour(px, py, matrix, levels=[0], colors=[color], linewidths=1)
+    ax.contour(
+        px, py, matrix, levels=[0], colors=[color], linewidths=0.5, zorder=90
+    )
 
 
 def plot_lmi_cut_area(ax, px, py, matrix, color):
