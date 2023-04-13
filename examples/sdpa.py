@@ -2,7 +2,6 @@
 
 """Solve SDPA using column generation"""
 
-# TODO Track the objective values of the iterates besides the lower bound.
 # TODO Improve performance of the solver. Check step size adjustament.
 
 import logging
@@ -17,9 +16,9 @@ from cpsdppy import utils
 logger = logging.getLogger(__name__)
 
 
-def gap(lower_bound: float, target: float) -> float:
-    if np.isfinite(target):
-        return (target - lower_bound) / np.abs(target)
+def gap(a: float, b: float, c: float) -> float:
+    if np.all(np.isfinite([a, b, c])):
+        return (a - b) / np.abs(c)
     else:
         return np.nan
 
@@ -106,9 +105,16 @@ def run_subgradient_projection(problem_data, config):
     journal.register_iteration_items(
         lb=dict(default=np.nan, timing=True),
         best_lb=dict(default=np.nan, timing=True),
-        gap=dict(default=np.nan, timing=True),
+        lb_gap=dict(default=np.nan, timing=True),
         step_size=dict(default=np.nan, timing=False),
         solution=dict(default=np.full(n_variables, np.nan), timing=False),
+        solution_objective_value=dict(default=np.nan, timing=False),
+        solution_objective_value_gap=dict(default=np.nan, timing=False),
+        solution_constraint_violation=dict(default=np.nan, timing=False),
+        regularised_rmp_n_linear_cuts=dict(default=-1, timing=False),
+        regularised_rmp_n_lmi_cuts=dict(default=-1, timing=False),
+        unregularised_rmp_n_linear_cuts=dict(default=-1, timing=False),
+        unregularised_rmp_n_lmi_cuts=dict(default=-1, timing=False),
     )
 
     regularised_model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
@@ -148,7 +154,7 @@ def run_subgradient_projection(problem_data, config):
                 unreg_lmi_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
             )
 
-    best_lower_bound = -np.inf
+    best_lb = -np.inf
 
     x = np.zeros(n_variables)
 
@@ -158,9 +164,9 @@ def run_subgradient_projection(problem_data, config):
         if 0 < iteration <= config.iteration_limit:
             solver_status = "iteration_limit"
             break
-        # if 0 <= timer.walltime <= config.time_limit:
-        #     solver_status = "time_limit"
-        #     break
+        if 0 < timer.walltime <= config.time_limit:
+            solver_status = "time_limit"
+            break
 
         journal.iteration_start_hook(iteration)
         reg_linear_cuts.iteration = iteration
@@ -170,8 +176,13 @@ def run_subgradient_projection(problem_data, config):
 
         if iteration % config.eval_lb_every == 0:
             unregularised_model.solve()
-            lower_bound = unregularised_model.get_objective_value()
-            best_lower_bound = max(lower_bound, best_lower_bound)
+            lb = unregularised_model.get_objective_value()
+            best_lb = max(lb, best_lb)
+
+        journal.set_iteration_items(
+            unregularised_rmp_n_linear_cuts=unreg_linear_cuts.n,
+            unregularised_rmp_n_lmi_cuts=unreg_lmi_cuts.n,
+        )
 
         matrices = []
         eigenvectors = []
@@ -229,39 +240,61 @@ def run_subgradient_projection(problem_data, config):
 
         x = reg.prox(x)
 
-        _gap = gap(best_lower_bound, config.target_objective)
+        solution_objective_value = objective_coef @ x
+        solution_objective_value_gap = gap(
+            solution_objective_value,
+            problem_data["target_objective"],
+            problem_data["target_objective"],
+        )
+        solution_constraint_violation = constr
+
+        _lb_gap = gap(
+            problem_data["target_objective"],
+            best_lb,
+            problem_data["target_objective"],
+        )
 
         journal.set_iteration_items(
-            lb=lower_bound,
-            best_lb=best_lower_bound,
-            gap=_gap,
+            lb=lb,
+            best_lb=best_lb,
+            lb_gap=_lb_gap,
             step_size=reg.step_size,
             solution=x,
+            solution_objective_value=solution_objective_value,
+            solution_objective_value_gap=solution_objective_value_gap,
+            solution_constraint_violation=solution_constraint_violation,
+            regularised_rmp_n_linear_cuts=reg_linear_cuts.n,
+            regularised_rmp_n_lmi_cuts=reg_lmi_cuts.n,
         )
 
         head = [
             f"{'it':>3s}",
             f"  {'elapse':>8s}",
-            f"  {'lower_bound':>11s}",
-            f"  {'gap (%)':>11s}",
+            f"  {'fx':>11s}",
+            f"  {'fx_gap (%)':>11s}",
+            f"  {'viol':>8s}",
+            f"  {'lb':>11s}",
+            f"  {'lb_gap (%)':>11s}",
             f"  {'rcols':>5s}",
             f"  {'ucols':>5s}",
-            f"  {'viol':>8s}",
         ]
-        lower_bound_symbol = " "
+        lb_symbol = " "
         n_rcuts = n_reg_linear_cuts + n_reg_lmi_cuts
         n_ucuts = n_unreg_linear_cuts + n_unreg_lmi_cuts
-        violation = constr
+        format_number = utils.format_number
         body = [
             f"{iteration:3d}",
             "  ",
             utils.format_elapse(timer.walltime),
-            f"  {utils.format_number(lower_bound, width=11)}",
-            lower_bound_symbol,
-            f" {utils.format_number(_gap * 100, width=11)}",
+            f"  {format_number(solution_objective_value, width=11)}",
+            " ",
+            f" {format_number(solution_objective_value_gap * 100, width=11)}",
+            f"  {format_number(solution_constraint_violation, width=8)}",
+            f"  {format_number(lb, width=11)}",
+            lb_symbol,
+            f" {format_number(_lb_gap * 100, width=11)}",
             f"  {n_rcuts:5d}",
             f"  {n_ucuts:5d}",
-            f"  {utils.format_number(violation, width=8)}",
         ]
         if iteration % (config.log_every * 20) == 0:
             logger.info("".join(head))
@@ -269,13 +302,29 @@ def run_subgradient_projection(problem_data, config):
             logger.debug("".join(head))
         logger.info("".join(body))
 
-        if (
-            np.isfinite(_gap)
-            and (0 <= _gap <= config.tol)
-            and (constr <= 1e-3)
-        ):
-            solver_status = "gap_closed"
-            break
+        lb_closed = np.isfinite(_lb_gap) and (0 <= _lb_gap <= config.tol)
+        solution_found = (
+            np.isfinite(solution_objective_value_gap)
+            and (0 <= solution_objective_value_gap <= config.tol)
+            and (solution_constraint_violation <= 1e-3)
+        )
+        assert config.termination_criteria in [
+            "lb_and_solution",
+            "solution",
+            "lb",
+        ]
+        if config.termination_criteria == "lb_and_solution":
+            if lb_closed and solution_found:
+                solver_status = "solved"
+                break
+        elif config.termination_criteria == "solution":
+            if solution_found:
+                solver_status = "solved"
+                break
+        else:
+            if lb_closed:
+                solver_status = "solved"
+                break
 
     result = dict()
     result.update(
@@ -287,7 +336,7 @@ def run_subgradient_projection(problem_data, config):
             walltime=timer.walltime,
             proctime=timer.proctime,
             n_iterations=len(journal.get_all("lb")),
-            target_objective=config.target_objective,
+            target_objective=problem_data["target_objective"],
             stepsize=config.step_size,
             time_limit=config.time_limit,
             iteration_limit=config.iteration_limit,
@@ -326,14 +375,14 @@ def run_column_generation(problem_data, config):
                 lmi_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
             )
 
-    best_lower_bound = -np.inf
+    best_lb = -np.inf
 
     for iteration in range(config.iteration_limit):
         linear_cuts.iteration = iteration
         lmi_cuts.iteration = iteration
         model.solve()
-        lower_bound = model.get_objective_value()
-        best_lower_bound = max(lower_bound, best_lower_bound)
+        lb = model.get_objective_value()
+        best_lb = max(lb, best_lb)
         if not model.is_optimal():
             raise ValueError(f"{iteration=}  {model.get_status_name()=}")
         x = model.get_solution()[:n_variables]
@@ -390,12 +439,12 @@ def run_column_generation(problem_data, config):
             f"{n_linear_cuts:7d} {n_lmi_cuts:7d}"
         )
 
-        _gap = gap(best_lower_bound, config.target_objective)
-        if (
-            np.isfinite(_gap)
-            and (0 <= _gap <= config.tol)
-            and (constr <= 1e-3)
-        ):
+        _lb_gap = gap(
+            problem_data["target_objective"],
+            best_lb,
+            problem_data["target_objective"],
+        )
+        if np.isfinite(_lb_gap) and (0 <= _lb_gap <= config.tol):
             solver_status = "gap_closed"
             break
 
@@ -601,19 +650,28 @@ def main() -> None:
     config.eigenvector_combination_cut = 0
     config.n_lmi_cuts_for_unregularised_rmp = 0
     config.n_lmi_cuts_for_regularised_rmp = 0
-    config.step_size = 100
-    config.target_objective = 23
+
+    # config.initial_cut_type = "lmi"
+    # config.n_linear_cuts_for_unregularised_rmp = 0
+    # config.n_linear_cuts_for_regularised_rmp = 0
+    # config.eigenvector_combination_cut = 0
+    # config.n_lmi_cuts_for_unregularised_rmp = 1
+    # config.n_lmi_cuts_for_regularised_rmp = 1
+
+    config.step_size = 1000
 
     handler = logging.StreamHandler()
     logging.getLogger().addHandler(handler)
     logging.getLogger().setLevel(logging.INFO)
 
-    problem_data = cpsdppy.sdpa.read("theta1.dat-s")
+    problem_name = "theta2.dat-s"
+    problem_data = cpsdppy.sdpa.read(problem_name)
     # problem_data = cpsdppy.sdpa.read("control1.dat-s")
     # problem_data = cpsdppy.toy.get("a")
     # problem_data = cpsdppy.toy.get("b")
     # problem_data = cpsdppy.toy.get("d")
     # run_column_generation(problem_data, config)
+
     run_subgradient_projection(problem_data, config)
 
 

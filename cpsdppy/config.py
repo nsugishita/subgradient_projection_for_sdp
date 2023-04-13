@@ -17,13 +17,12 @@ class Config(object):
         """Initialise a Config instance"""
         self.verbose: int = 0
 
-        # Suboptimality tolerance.  If the gap between the bound and
-        # the target objective is smaller than this value, the solver
-        # terminates.
+        # Suboptimality tolerance. See 'termination_criteria'.
         self.tol: float = 1e-2
 
-        # Target objective used in the termination criteria. See `tol`.
-        self.target_objective: float = float("nan")
+        # The condition to terminate solver.
+        # {'lb_and_solution', 'solution', 'lb'}
+        self.termination_criteria: str = "solution"
 
         # Time limit
         self.time_limit: float = 0

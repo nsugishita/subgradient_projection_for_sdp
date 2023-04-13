@@ -50,12 +50,13 @@ import re
 import textwrap
 
 import numpy as np
+import pandas as pd
 import scipy.sparse
 
 from cpsdppy import linalg
 
 
-def read(file, config=None):
+def read(problem_name, config=None):
     """Read data of SDPA format
 
     Examples
@@ -66,11 +67,11 @@ def read(file, config=None):
     >>> len(data['lmi_constraint_coefficient'])
     2
     """
-    sdpa_data = _read(file, config)
-    return _convert_sdpa_data_to_dict(sdpa_data, config)
+    sdpa_data = _read(problem_name, config)
+    return _convert_sdpa_data_to_dict(problem_name, sdpa_data, config)
 
 
-def _convert_sdpa_data_to_dict(data, config):
+def _convert_sdpa_data_to_dict(problem_name, data, config):
     c, F = data
     objective_coefficient = np.asarray(c)
     n_variables = len(objective_coefficient)
@@ -101,6 +102,7 @@ def _convert_sdpa_data_to_dict(data, config):
         )
         lmi_svec_constraint_offset.append(svec_F[0].toarray().reshape(-1))
     return dict(
+        target_objective=get_optimal_objective_value(problem_name),
         n_variables=n_variables,
         objective_sense="min",
         objective_offset=0.0,
@@ -620,6 +622,35 @@ def _parse_int(text, pos=0):
     parsed = collections.namedtuple("parsed", "value pos")
 
     return parsed(value, pos + len(parsed_text))
+
+
+def get_optimal_objective_value(problem_name):
+    if "." in problem_name:
+        problem_name = problem_name.split(".")[0]
+    path = os.path.expanduser("~/work/repos/github.com/vsdp/SDPLIB/README.md")
+    lines = []
+    with open(path, "r") as f:
+        mode = 0
+        for i, l in enumerate(f):
+            if mode == 0:
+                if l.startswith("|"):
+                    mode += 1
+            if mode == 1:
+                if l.startswith("|"):
+                    lines.append(l)
+                else:
+                    mode += 1
+            if mode >= 2:
+                break
+    lines = lines[:1] + lines[2:]
+    lines = [x[2:-3].replace("|", ",") for x in lines]
+    lines = "\n".join(lines)
+    df = pd.read_csv(io.StringIO(lines), sep=" +, +", engine="python")
+    return float(
+        df.loc[df["Problem"] == problem_name, "Optimal Objective Value"].iloc[
+            0
+        ]
+    )
 
 
 if __name__ == "__main__":
