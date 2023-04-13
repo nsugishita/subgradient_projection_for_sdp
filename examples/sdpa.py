@@ -6,7 +6,9 @@
 
 import logging
 import os
+import pickle
 
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse
 
@@ -86,31 +88,35 @@ def add_initial_lmi_cuts(lmi_cuts, constr_coef, constr_offset):
     lmi_cuts.add_lmi_cuts(coef=coef, offset=offset)
 
 
-def run_subgradient_projection(problem_data, config):
+def run_subgradient_projection(prefix, problem_data, config):
+    cache_path = f"tmp/sdpa/{prefix}.pkl"
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    print(cache_path)
+    if os.path.exists(cache_path):
+        with open(cache_path, "rb") as f:
+            return pickle.load(f)
+
+    res = _run_subgradient_projection_impl(problem_data, config)
+
+    with open(cache_path, "wb") as f:
+        pickle.dump(res, f)
+    return res
+
+
+def _run_subgradient_projection_impl(problem_data, config):
     n_variables = problem_data["objective_coefficient"].size
 
     journal = utils.IterationJournal()
-    journal.start_hook()
-    timer = utils.timer()
-
-    def remaining_time():
-        if config.time_limit is None:
-            return np.inf
-        if config.time_limit <= 0:
-            return np.inf
-        if not np.isfinite(config.time_limit):
-            return np.inf
-        return config.time_limit - timer.walltime
 
     journal.register_iteration_items(
         lb=dict(default=np.nan, timing=True),
         best_lb=dict(default=np.nan, timing=True),
         lb_gap=dict(default=np.nan, timing=True),
         step_size=dict(default=np.nan, timing=False),
-        solution=dict(default=np.full(n_variables, np.nan), timing=False),
-        solution_objective_value=dict(default=np.nan, timing=False),
-        solution_objective_value_gap=dict(default=np.nan, timing=False),
-        solution_constraint_violation=dict(default=np.nan, timing=False),
+        solution=dict(default=np.full(n_variables, np.nan), timing=True),
+        solution_objective_value=dict(default=np.nan, timing=True),
+        solution_objective_value_gap=dict(default=np.nan, timing=True),
+        solution_constraint_violation=dict(default=np.nan, timing=True),
         regularised_rmp_n_linear_cuts=dict(default=-1, timing=False),
         regularised_rmp_n_lmi_cuts=dict(default=-1, timing=False),
         unregularised_rmp_n_linear_cuts=dict(default=-1, timing=False),
@@ -160,11 +166,23 @@ def run_subgradient_projection(problem_data, config):
 
     solver_status = "unknown"
 
+    journal.start_hook()
+    timer = utils.timer()
+
+    def remaining_time():
+        if config.time_limit is None:
+            return np.inf
+        if config.time_limit <= 0:
+            return np.inf
+        if not np.isfinite(config.time_limit):
+            return np.inf
+        return config.time_limit - timer.walltime
+
     for iteration in range(1000):
         if 0 < iteration <= config.iteration_limit:
             solver_status = "iteration_limit"
             break
-        if 0 < timer.walltime <= config.time_limit:
+        if 0 < config.time_limit <= timer.walltime:
             solver_status = "time_limit"
             break
 
@@ -236,6 +254,21 @@ def run_subgradient_projection(problem_data, config):
         n_unreg_linear_cuts = unreg_linear_cuts.n
         n_unreg_lmi_cuts = unreg_lmi_cuts.n
 
+        # Do subgradient projection.
+        funcval = -w[0]
+        v0v0t = cpsdppy.linalg.svec(v[:, 0, None] @ v[None, :, 0])
+        np.testing.assert_equal(v0v0t.ndim, 1)
+        subgrad = -v0v0t @ constr_svec_coefs[coef_i]
+        np.testing.assert_equal(subgrad.ndim, 1)
+        relaxation_parameter = 1.0
+        if funcval > 0:
+            x = (
+                x
+                - relaxation_parameter
+                * funcval
+                * subgrad
+                / np.linalg.norm(subgrad) ** 2
+            )
         x = reg.project(x)
 
         x = reg.prox(x)
@@ -305,7 +338,8 @@ def run_subgradient_projection(problem_data, config):
         lb_closed = np.isfinite(_lb_gap) and (0 <= _lb_gap <= config.tol)
         solution_found = (
             np.isfinite(solution_objective_value_gap)
-            and (0 <= solution_objective_value_gap <= config.tol)
+            and (0 < config.tol)
+            and (solution_objective_value_gap <= config.tol)
             and (solution_constraint_violation <= 1e-3)
         )
         assert config.termination_criteria in [
@@ -644,35 +678,77 @@ def main() -> None:
     """Run the main routine of this script"""
     config = cpsdppy.config.Config()
 
-    config.initial_cut_type = "linear"
-    config.n_linear_cuts_for_unregularised_rmp = 1
-    config.n_linear_cuts_for_regularised_rmp = 1
-    config.eigenvector_combination_cut = 0
-    config.n_lmi_cuts_for_unregularised_rmp = 0
-    config.n_lmi_cuts_for_regularised_rmp = 0
-
-    # config.initial_cut_type = "lmi"
-    # config.n_linear_cuts_for_unregularised_rmp = 0
-    # config.n_linear_cuts_for_regularised_rmp = 0
-    # config.eigenvector_combination_cut = 0
-    # config.n_lmi_cuts_for_unregularised_rmp = 1
-    # config.n_lmi_cuts_for_regularised_rmp = 1
-
-    config.step_size = 1000
-
     handler = logging.StreamHandler()
     logging.getLogger().addHandler(handler)
     logging.getLogger().setLevel(logging.INFO)
 
-    problem_name = "theta2.dat-s"
-    problem_data = cpsdppy.sdpa.read(problem_name)
-    # problem_data = cpsdppy.sdpa.read("control1.dat-s")
-    # problem_data = cpsdppy.toy.get("a")
-    # problem_data = cpsdppy.toy.get("b")
-    # problem_data = cpsdppy.toy.get("d")
-    # run_column_generation(problem_data, config)
+    for problem_name in ["theta1", "theta2"]:
+        for step_size in [100, 10]:
+            problem_data = cpsdppy.sdpa.read(problem_name)
 
-    run_subgradient_projection(problem_data, config)
+            results = dict()
+
+            for setup in ["linear", "lmi"]:
+                _config = config.copy()
+                _config.time_limit = 60
+                _config.step_size = step_size
+                if "linear" in setup:
+                    _config.initial_cut_type = "linear"
+                    _config.n_linear_cuts_for_unregularised_rmp = 1
+                    _config.n_linear_cuts_for_regularised_rmp = 1
+                    _config.eigenvector_combination_cut = 0
+                    _config.n_lmi_cuts_for_unregularised_rmp = 0
+                    _config.n_lmi_cuts_for_regularised_rmp = 0
+
+                elif "lmi" in setup:
+                    _config.initial_cut_type = "lmi"
+                    _config.n_linear_cuts_for_unregularised_rmp = 0
+                    _config.n_linear_cuts_for_regularised_rmp = 0
+                    _config.eigenvector_combination_cut = 0
+                    _config.n_lmi_cuts_for_unregularised_rmp = 1
+                    _config.n_lmi_cuts_for_regularised_rmp = 1
+
+                prefix = (
+                    f"{problem_name.split('.')[0]}_{setup}_"
+                    f"step_size_{_config.step_size}"
+                )
+                results[setup] = run_subgradient_projection(
+                    prefix, problem_data, _config
+                )
+
+            fig, ax = plt.subplots()
+            fig_it, ax_it = plt.subplots()
+            for setup_i, setup in enumerate(["linear", "lmi"]):
+                res = results[setup]
+                y = -res["iter_lb_gap"] * 100
+                x = res["iter_lb_gap_time"]
+                ax.plot(x, y, color=f"C{setup_i}", label=setup)
+                x = np.arange(len(y)) + 1
+                ax_it.plot(x, y, color=f"C{setup_i}", label=setup)
+                y = res["iter_solution_objective_value_gap"] * 100
+                x = res["iter_solution_objective_value_gap_time"]
+                ax.plot(x, y, color=f"C{setup_i}")
+                ax.plot(x, y, color=f"C{setup_i}")
+                x = np.arange(len(y)) + 1
+                ax_it.plot(x, y, color=f"C{setup_i}")
+            ax.legend()
+            ax_it.legend()
+            ax.set_xlabel("elapse (seconds)")
+            ax.set_ylabel("suboptimality of bounds (%)")
+            ax_it.set_xlabel("iteration")
+            ax_it.set_ylabel("suboptimality of bounds (%)")
+            path = (
+                f"tmp/sdpa/{problem_name.split('.')[0]}_walltime_"
+                f"step_size_{step_size}_with_lb.pdf"
+            )
+            fig.savefig(path, transparent=True)
+            print(path)
+            path = (
+                f"tmp/sdpa/{problem_name.split('.')[0]}_iteration_"
+                f"step_size_{step_size}_with_lb.pdf"
+            )
+            fig_it.savefig(path, transparent=True)
+            print(path)
 
 
 if __name__ == "__main__":
