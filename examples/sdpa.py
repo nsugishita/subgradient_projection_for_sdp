@@ -2,8 +2,8 @@
 
 """Solve SDPA using column generation"""
 
-# TODO Use config to set memory.
 # TODO Log time etc.
+# TODO Improve performance of the solver. Check step size adjustament.
 
 import logging
 
@@ -11,18 +11,16 @@ import numpy as np
 import scipy.sparse
 
 import cpsdppy
+from cpsdppy import utils
 
 logger = logging.getLogger(__name__)
 
-# initial_cuts = "linear"
-# n_linear_cuts_per_iteration = 1
-# n_lmi_cuts_per_iteration = 0
 
-use_unregularised_model = 0
-
-initial_cuts = "lmi"
-n_linear_cuts_per_iteration = 0
-n_lmi_cuts_per_iteration = 1
+def gap(lower_bound: float, target: float) -> float:
+    if np.isfinite(target):
+        return (target - lower_bound) / np.abs(target)
+    else:
+        return np.nan
 
 
 def add_initial_linear_cuts(linear_cuts, constr_coef, constr_offset):
@@ -89,7 +87,6 @@ def add_initial_lmi_cuts(lmi_cuts, constr_coef, constr_offset):
 
 
 def run_subgradient_projection(problem_data, config):
-    # TODO Make reguarised and unregularised RMP and add cuts on the latter.
     regularised_model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
     unregularised_model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
     lb = problem_data["variable_lb"]
@@ -99,9 +96,9 @@ def run_subgradient_projection(problem_data, config):
     unregularised_model.add_variables(lb=lb, ub=ub, obj=objective_coef)
 
     reg = cpsdppy.mip_solver_extensions.MoreuYoshidaRegularisation(
-        regularised_model, config=None
+        regularised_model, config=config
     )
-    reg.step_size = 100  # TODO
+    reg.step_size = config.step_size
     reg_linear_cuts = cpsdppy.mip_solver_extensions.LinearCuts(
         regularised_model
     )
@@ -112,38 +109,46 @@ def run_subgradient_projection(problem_data, config):
     unreg_lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(unregularised_model)
     n_variables = regularised_model.get_n_variables()
 
-    if use_unregularised_model:
-        linear_cut_lists = [reg_linear_cuts, unreg_linear_cuts]
-        lmi_cut_lists = [reg_lmi_cuts, unreg_lmi_cuts]
-    else:
-        linear_cut_lists = [reg_linear_cuts]
-        lmi_cut_lists = [reg_lmi_cuts]
-
     constr_coefs = problem_data["lmi_constraint_coefficient"]
     constr_offsets = problem_data["lmi_constraint_offset"]
     constr_svec_coefs = problem_data["lmi_svec_constraint_coefficient"]
     constr_svec_offset = problem_data["lmi_svec_constraint_offset"]
 
-    assert initial_cuts in ["linear", "lmi", "", None]
+    assert config.initial_cut_type in ["linear", "lmi", "none"]
     for coef_i in range(len(constr_svec_coefs)):
-        if initial_cuts == "linear":
+        if config.initial_cut_type == "linear":
             add_initial_linear_cuts(
                 unreg_linear_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
             )
-        elif initial_cuts == "lmi":
+        elif config.initial_cut_type == "lmi":
             add_initial_lmi_cuts(
                 unreg_lmi_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
             )
 
     x_list = []
+    best_lower_bound = -np.inf
 
     x = np.zeros(n_variables)
 
-    for iteration in range(20):
+    solver_status = "unknown"
+
+    for iteration in range(1000):
+        if 0 < iteration <= config.iteration_limit:
+            solver_status = "iteration_limit"
+            break
+        # if 0 <= timer.walltime <= config.time_limit:
+        #     solver_status = "time_limit"
+        #     break
+
         reg_linear_cuts.iteration = iteration
         reg_lmi_cuts.iteration = iteration
         unreg_linear_cuts.iteration = iteration
         unreg_lmi_cuts.iteration = iteration
+
+        if iteration % config.eval_lb_every == 0:
+            unregularised_model.solve()
+            lower_bound = unregularised_model.get_objective_value()
+            best_lower_bound = max(lower_bound, best_lower_bound)
 
         matrices = []
         eigenvectors = []
@@ -166,25 +171,31 @@ def run_subgradient_projection(problem_data, config):
         v = eigenvectors[coef_i]
 
         add_cuts(
-            linear_cut_lists,
-            lmi_cut_lists,
+            config,
+            unreg_linear_cuts,
+            unreg_lmi_cuts,
             constr_svec_coefs[coef_i],
             constr_svec_offset[coef_i],
             x,
             w,
             v,
+            config.n_linear_cuts_for_unregularised_rmp,
+            config.n_lmi_cuts_for_unregularised_rmp,
         )
-        # add_cuts(
-        #     [reg_linear_cuts, unreg_linear_cuts],
-        #     [reg_lmi_cuts, unreg_lmi_cuts],
-        #     constr_svec_coefs[coef_i],
-        #     constr_svec_offset[coef_i],
-        #     x,
-        #     w,
-        #     v,
-        # )
+        add_cuts(
+            config,
+            reg_linear_cuts,
+            reg_lmi_cuts,
+            constr_svec_coefs[coef_i],
+            constr_svec_offset[coef_i],
+            x,
+            w,
+            v,
+            config.n_linear_cuts_for_regularised_rmp,
+            config.n_lmi_cuts_for_regularised_rmp,
+        )
 
-        obj = objective_coef @ x
+        # obj = objective_coef @ x
         constr = -w[0]
         n_reg_linear_cuts = reg_linear_cuts.n
         n_reg_lmi_cuts = reg_lmi_cuts.n
@@ -195,27 +206,48 @@ def run_subgradient_projection(problem_data, config):
 
         x = reg.prox(x)
 
-        if iteration == 0:
-            logger.info(
-                f"{'it':>3s} "
-                f"{'obj':>9s} {'constr':>9s} "
-                f"{'|x|inf':>9s} "
-                f"{'reglnr':>7s} {'reglmi':>7s}"
-                f"{'ureglnr':>7s} {'ureglmi':>7s}"
-            )
-        logger.info(
-            f"{iteration + 1:3d} "
-            f"{cpsdppy.utils.format_number(obj)} "
-            f"{cpsdppy.utils.format_number(constr)} "
-            f"{cpsdppy.utils.format_number(np.linalg.norm(x, ord=np.inf))} "
-            f"{n_reg_linear_cuts:7d} {n_reg_lmi_cuts:7d} "
-            f"{n_unreg_linear_cuts:7d} {n_unreg_lmi_cuts:7d} "
-        )
+        head = [
+            f"{'it':>3s}",
+            f"  {'elapse':>8s}",
+            f"  {'lower_bound':>11s}",
+            f"  {'gap (%)':>11s}",
+            f"  {'rcols':>5s}",
+            f"  {'ucols':>5s}",
+            f"  {'viol':>8s}",
+        ]
+        lower_bound_symbol = " "
+        _gap = gap(best_lower_bound, config.target_objective)
+        n_rcuts = n_reg_linear_cuts + n_reg_lmi_cuts
+        n_ucuts = n_unreg_linear_cuts + n_unreg_lmi_cuts
+        violation = constr
+        body = [
+            f"{iteration:3d}",
+            "  ",
+            # utils.format_elapse(timer.walltime),
+            f"{'-':>8s}",
+            f"  {utils.format_number(lower_bound, width=11)}",
+            lower_bound_symbol,
+            f" {utils.format_number(_gap * 100, width=11)}",
+            f"  {n_rcuts:5d}",
+            f"  {n_ucuts:5d}",
+            f"  {utils.format_number(violation, width=8)}",
+        ]
+        if iteration % (config.log_every * 20) == 0:
+            logger.info("".join(head))
+        else:
+            logger.debug("".join(head))
+        logger.info("".join(body))
 
-        if constr <= 1e-6:
+        if (
+            np.isfinite(_gap)
+            and (0 <= _gap <= config.tol)
+            and (constr <= 1e-4)
+        ):
+            solver_status = "gap_closed"
             break
 
     return {
+        "solver_status": solver_status,
         "x_list": x_list,
         "constr_svec_coefs": constr_svec_coefs,
         "constr_svec_offset": constr_svec_offset,
@@ -237,22 +269,26 @@ def run_column_generation(problem_data, config):
     constr_svec_coefs = problem_data["lmi_svec_constraint_coefficient"]
     constr_svec_offset = problem_data["lmi_svec_constraint_offset"]
 
+    assert config.initial_cut_type in ["linear", "lmi", "none"]
     for coef_i in range(len(constr_svec_coefs)):
-        if initial_cuts == "linear":
+        if config.initial_cut_type == "linear":
             add_initial_linear_cuts(
                 linear_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
             )
-        elif initial_cuts == "lmi":
+        elif config.initial_cut_type == "lmi":
             add_initial_lmi_cuts(
                 lmi_cuts, constr_coefs[coef_i], constr_offsets[coef_i]
             )
 
     x_list = []
+    best_lower_bound = -np.inf
 
-    for iteration in range(100):
+    for iteration in range(config.iteration_limit):
         linear_cuts.iteration = iteration
         lmi_cuts.iteration = iteration
         model.solve()
+        lower_bound = model.get_objective_value()
+        best_lower_bound = max(lower_bound, best_lower_bound)
         if not model.is_optimal():
             raise ValueError(f"{iteration=}  {model.get_status_name()=}")
         x = model.get_solution()[:n_variables]
@@ -278,6 +314,7 @@ def run_column_generation(problem_data, config):
         v = eigenvectors[coef_i]
 
         add_cuts(
+            config,
             linear_cuts,
             lmi_cuts,
             constr_svec_coefs[coef_i],
@@ -285,6 +322,8 @@ def run_column_generation(problem_data, config):
             x,
             w,
             v,
+            config.n_linear_cuts_for_unregularised_rmp,
+            config.n_lmi_cuts_for_unregularised_rmp,
         )
 
         obj = objective_coef @ x
@@ -300,17 +339,24 @@ def run_column_generation(problem_data, config):
             )
         logger.info(
             f"{iteration + 1:3d} "
-            f"{cpsdppy.utils.format_number(obj)} "
-            f"{cpsdppy.utils.format_number(constr)} "
-            f"{cpsdppy.utils.format_number(np.linalg.norm(x, ord=np.inf))} "
+            f"{utils.format_number(obj)} "
+            f"{utils.format_number(constr)} "
+            f"{utils.format_number(np.linalg.norm(x, ord=np.inf))} "
             f"{n_linear_cuts:7d} {n_lmi_cuts:7d}"
         )
         x_list.append(x)
 
-        if constr <= 1e-6:
+        _gap = gap(best_lower_bound, config.target_objective)
+        if (
+            np.isfinite(_gap)
+            and (0 <= _gap <= config.tol)
+            and (constr <= 1e-4)
+        ):
+            solver_status = "gap_closed"
             break
 
     return {
+        "solver_status": solver_status,
         "x_list": x_list,
         "linear_cuts": linear_cuts,
         "constr_svec_coefs": constr_svec_coefs,
@@ -319,15 +365,20 @@ def run_column_generation(problem_data, config):
 
 
 def add_cuts(
-    linear_cuts, lmi_cuts, constr_svec_coef, constr_svec_offset, x, w, v
+    config,
+    linear_cuts,
+    lmi_cuts,
+    constr_svec_coef,
+    constr_svec_offset,
+    x,
+    w,
+    v,
+    n_linear_cuts,
+    n_lmi_cuts,
 ):
     # TODO Improve efficiency using initialisation routine.
-    if not isinstance(linear_cuts, list):
-        linear_cuts = [linear_cuts]
-    if not isinstance(lmi_cuts, list):
-        lmi_cuts = [lmi_cuts]
 
-    for i in range(n_lmi_cuts_per_iteration):
+    for i in range(n_lmi_cuts):
         v0 = v[:, 2 * i]
         v1 = v[:, 2 * i + 1]
         v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
@@ -353,18 +404,23 @@ def add_cuts(
                 v1v1t @ constr_svec_offset,
             ]
         )
-        for x in lmi_cuts:
-            x.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
+        lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
 
-    for i in range(n_linear_cuts_per_iteration):
-        v0 = v[:, i + 2 * n_lmi_cuts_per_iteration]
+    for i in range(n_linear_cuts):
+        v0 = v[:, i + 2 * n_lmi_cuts]
         v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
         cut_coef = v0v0t @ constr_svec_coef
         cut_offset = v0v0t @ constr_svec_offset
-        for x in linear_cuts:
-            x.add_linear_cuts(coef=-cut_coef, offset=-cut_offset)
+        linear_cuts.add_linear_cuts(coef=-cut_coef, offset=-cut_offset)
 
-    # TODO Add combination cuts.
+    if config.eigenvector_combination_cut:
+        v0 = np.sum(np.clip(w, None, 0.0) * v, axis=1)
+        norm = np.linalg.norm(v0)
+        if norm != 0:
+            v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
+            cut_coef = v0v0t @ constr_svec_coef
+            cut_offset = v0v0t @ constr_svec_offset
+            linear_cuts.add_linear_cuts(coef=-cut_coef, offset=-cut_offset)
 
 
 def get_linear_cut_coef(constr_coef, constr_offset, v):
@@ -492,8 +548,19 @@ def get_lmi_cut_coef(constr_coef, constr_offset, v0, v1):
     return coefs, offsets
 
 
-def main():
+def main() -> None:
     """Run the main routine of this script"""
+    config = cpsdppy.config.Config()
+
+    config.initial_cut_type = "linear"
+    config.n_linear_cuts_for_unregularised_rmp = 1
+    config.n_linear_cuts_for_regularised_rmp = 1
+    config.eigenvector_combination_cut = 0
+    config.n_lmi_cuts_for_unregularised_rmp = 0
+    config.n_lmi_cuts_for_regularised_rmp = 0
+    config.step_size = 1
+    config.target_objective = 23
+
     handler = logging.StreamHandler()
     logging.getLogger().addHandler(handler)
     logging.getLogger().setLevel(logging.INFO)
@@ -503,7 +570,6 @@ def main():
     # problem_data = cpsdppy.toy.get("a")
     # problem_data = cpsdppy.toy.get("b")
     # problem_data = cpsdppy.toy.get("d")
-    config = {}
     # run_column_generation(problem_data, config)
     run_subgradient_projection(problem_data, config)
 
