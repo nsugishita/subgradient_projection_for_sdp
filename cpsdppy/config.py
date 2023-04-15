@@ -105,6 +105,30 @@ class Config(object):
             if not eq(default.get(key, {}), value):
                 yield key, default.get(key, None), value
 
+    def non_default_as_str(self) -> str:
+        """Yield config items changed from their default values
+
+        Examples
+        --------
+        >>> c = Config()
+        >>> c.tol = 1e-3
+        >>> c.time_limit = 40
+        >>> c.non_default_as_str()
+        'tol_0.001_time_limit_40'
+
+        Returns
+        -------
+        res : str
+        """
+        res = []
+        for key, default, new in self.non_default():
+            res.append(str(key))
+            res.append(str(new))
+        out = "_".join(res)
+        for key in "~!@#$%^&*()`={}|[]\\;:'\"<>?,/":
+            out = out.replace(key, "_")
+        return out
+
     def display_non_default(self, write=print) -> None:
         """Display config items changed from their default values
 
