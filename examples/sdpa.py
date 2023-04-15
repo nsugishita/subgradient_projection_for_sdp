@@ -3,6 +3,7 @@
 """Solve SDPA using column generation"""
 
 # TODO Improve performance of the solver. Check step size adjustament.
+# TODO Record time of subroutines.
 
 import logging
 import os
@@ -16,6 +17,8 @@ import cpsdppy
 from cpsdppy import utils
 
 logger = logging.getLogger(__name__)
+
+use_cache = False
 
 
 def gap(a: float, b: float, c: float) -> float:
@@ -92,7 +95,7 @@ def run_subgradient_projection(prefix, problem_data, config):
     cache_path = f"tmp/sdpa/{prefix}.pkl"
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
     print(cache_path)
-    if os.path.exists(cache_path):
+    if os.path.exists(cache_path) and use_cache:
         with open(cache_path, "rb") as f:
             return pickle.load(f)
 
@@ -271,7 +274,8 @@ def _run_subgradient_projection_impl(problem_data, config):
             )
         x = reg.project(x)
 
-        x = reg.prox(x)
+        x = x - reg.step_size * objective_coef
+        x = reg.project(x)
 
         solution_objective_value = objective_coef @ x
         solution_objective_value_gap = gap(
