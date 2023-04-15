@@ -8,6 +8,7 @@ import sys
 import typing
 
 import numpy as np
+import yaml
 
 
 class Config(object):
@@ -165,25 +166,24 @@ class Config(object):
         for key, old, new in zip(keys, olds, news):
             write(formatter.format(key=key, old=old, new=new))
 
-    def read_command_line_args(
-        self, args: typing.Optional[typing.List[str]] = None
-    ) -> typing.List[str]:
-        """Read command line arguments and return unparsed arguments
+    def add_arguments(self, parser):
+        """Add arguments to a given ArgumentParser
+
+        Examples
+        --------
+        >>> import argparse
+        >>> parser = argparse.ArgumentParser()
+        >>> _ = parser.add_argument('--foo', type=int)
+        >>> config = Config()
+        >>> config.add_arguments(parser)
+        >>> args = parser.parse_args(['--foo', '10', '--step-size', '2e-1'])
+        >>> args.step_size
+        0.2
 
         Parameters
         ----------
-        args : list[str], optional
-            Arguments to be parsed. If not given, `sys.argv`
-            is used.
-
-        Returns
-        -------
-        unknown : list[str]
-            Arguments which are not used to update config.
+        parser : argparse.ArgumentParser
         """
-        if args is None:
-            args = sys.argv[1:]
-        parser = argparse.ArgumentParser()
         parser.add_argument("--config", type=str)
         for key, value in self.__dict__.items():
             command_line_key = "--" + key.replace("_", "-")
@@ -192,10 +192,47 @@ class Config(object):
                 type=type(value),
                 dest=key,
             )
-        parsed, unknown = parser.parse_known_args()
-        if parsed.config is not None:
-            import yaml
 
+    def parse_args(
+        self,
+        args: typing.Optional[
+            typing.Union[argparse.Namespace, typing.List[str]]
+        ] = None,
+    ) -> None:
+        """Read command line arguments and return unparsed arguments
+
+        Examples
+        --------
+        >>> import argparse
+        >>> parser = argparse.ArgumentParser()
+        >>> _ = parser.add_argument('--foo', type=int)
+        >>> config = Config()
+        >>> config.add_arguments(parser)
+        >>> args = parser.parse_args(['--foo', '10', '--step-size', '2e-1'])
+        >>> config.parse_args(args)
+        >>> config.display_non_default()
+        step_size : 0.001 -> 0.2
+
+        Parameters
+        ----------
+        args : argparse.Namespace or list[str], optional
+            Arguments to be parsed. If not given, `sys.argv` is used.
+        """
+
+        if (args is None) or isinstance(args, list):
+            if args is None:
+                args = sys.argv[1:]
+
+            parser = self._create_argparser()
+            parsed, unknown = parser.parse_known_args(args)
+
+        elif isinstance(args, argparse.Namespace):
+            parsed = args
+
+        else:
+            raise TypeError(type(args))
+
+        if (parsed.config is not None) and (len(parsed.config) > 0):
             with open(parsed.config, "r") as f:
                 loaded = yaml.safe_load(f)
             self._update_from_dict_inplace(loaded)
@@ -206,7 +243,11 @@ class Config(object):
             if value is None:
                 continue
             self.__dict__[key] = value
-        return unknown
+
+    def _create_argparser(self):
+        parser = argparse.ArgumentParser()
+        self.add_arguments(parser)
+        return parser
 
     def _update_from_dict_inplace(
         self, d: typing.Optional[typing.Dict[str, typing.Any]]
@@ -219,6 +260,27 @@ class Config(object):
                 raise KeyError(key)
         for key, value in d.items():
             self.__dict__[key] = value
+
+
+def add_arguments(parser):
+    """Add arguments to a given ArgumentParser
+
+    Examples
+    --------
+    >>> import argparse
+    >>> parser = argparse.ArgumentParser()
+    >>> _ = parser.add_argument('--foo', type=int)
+    >>> add_arguments(parser)
+    >>> args = parser.parse_args(['--foo', '10', '--step-size', '2e-1'])
+    >>> args.step_size
+    0.2
+
+    Parameters
+    ----------
+    parser : argparse.ArgumentParser
+    """
+    config = Config()
+    config.add_arguments(parser)
 
 
 if __name__ == "__main__":
