@@ -181,6 +181,7 @@ def _run_subgradient_projection_impl(problem_data, config):
 
     journal.start_hook()
     timer = utils.timer()
+    step_size_manager = StepSizeManager(config)
 
     def remaining_time():
         if config.time_limit is None:
@@ -308,16 +309,15 @@ def _run_subgradient_projection_impl(problem_data, config):
 
         x = reg.project(v - reg.step_size * objective_coef)
 
-        # TODO Adjust step size.
-        # step_size_manager.feed(
-        #     x=x,
-        #     fx=f,
-        #     gx=gx,
-        #     v=v,
-        #     fv=fv,
-        #     gv=gv,
-        # )
-        # reg.step_size = step_size_manager.step_size
+        step_size_manager.feed(
+            x=x,
+            fx=eval_x.f,
+            gx=eval_x.g,
+            v=v,
+            fv=eval_v.f,
+            gv=eval_v.g,
+        )
+        reg.step_size = step_size_manager.step_size
 
         _lb_gap = gap(
             best_lb,
@@ -364,6 +364,7 @@ def _run_subgradient_projection_impl(problem_data, config):
             f"  {'lb_gap (%)':>11s}",
             f"  {'rcols':>5s}",
             f"  {'ucols':>5s}",
+            f"  {'ss':>7s}",
         ]
         # lb_symbol = " "
         n_rcuts = n_reg_linear_cuts + n_reg_lmi_cuts
@@ -385,6 +386,7 @@ def _run_subgradient_projection_impl(problem_data, config):
             f"  {format_number(-_lb_gap * 100, width=11)}",
             f"  {n_rcuts:5d}",
             f"  {n_ucuts:5d}",
+            f"  {reg.step_size:7.1e}",
         ]
         if iteration % (config.log_every * 20) == 0:
             logger.info("".join(head))
@@ -444,6 +446,60 @@ def _run_subgradient_projection_impl(problem_data, config):
     for key in result:
         result[key] = np.asarray(result[key])
     return result
+
+
+class StepSizeManager:
+    def __init__(self, config):
+        self.config = config
+        self.shift = 0
+        self.scale = 1.2
+        self.step_size_factor = 1
+        self.fx = np.array([])
+        self.gx = np.array([])
+        self.fv = np.array([])
+        self.gv = np.array([])
+
+    @property
+    def step_size(self):
+        return self.config.step_size * self.step_size_factor
+
+    def feed(self, x, fx, gx, v, fv, gv):
+        self.fx = np.r_[self.fx, fx]
+        self.gx = np.r_[self.gx, np.max(gx)]
+        self.fv = np.r_[self.fv, fv]
+        self.gv = np.r_[self.gv, np.max(gv)]
+
+        iter = len(self.gx)
+
+        warmup = 4
+        v_x = np.linalg.norm(v - x, ord=2)
+
+        if iter <= warmup:
+            accepted = True
+            step_size_adjustament = "none"
+        elif v_x <= self.config.feas_tol:
+            accepted = True
+            step_size_adjustament = "increase"
+        elif np.all(self.gv[warmup:] > 1e-3):
+            accepted = self.gv[-1] <= np.min(self.gv[warmup:-1])
+            step_size_adjustament = "decrease"
+        else:
+            score = self.fv.copy()
+            score[:warmup] = np.inf
+            score[self.gv > self.config.feas_tol] = np.inf
+            accepted = score[-1] <= np.min(score[:-1])
+            if accepted:
+                step_size_adjustament = "increase"
+            else:
+                step_size_adjustament = "decrease"
+
+        if iter >= warmup:
+            if step_size_adjustament == "increase":
+                self.step_size_factor += self.shift
+                self.step_size_factor *= self.scale
+            elif step_size_adjustament == "decrease":
+                self.step_size_factor -= self.shift
+                self.step_size_factor /= self.scale
 
 
 def run_column_generation(problem_data, config):
