@@ -6,6 +6,7 @@ import argparse
 import copy
 import sys
 import typing
+import warnings
 
 import numpy as np
 import yaml
@@ -166,7 +167,7 @@ class Config(object):
         for key, old, new in zip(keys, olds, news):
             write(formatter.format(key=key, old=old, new=new))
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser, conflict="warn", _stacklevel=2):
         """Add arguments to a given ArgumentParser
 
         Examples
@@ -184,14 +185,30 @@ class Config(object):
         ----------
         parser : argparse.ArgumentParser
         """
+        assert conflict in ["pass", "raise", "warn"]
+        conflict_names = []
         parser.add_argument("--config", type=str)
         for key, value in self.__dict__.items():
             command_line_key = "--" + key.replace("_", "-")
-            parser.add_argument(
-                command_line_key,
-                type=type(value),
-                dest=key,
-            )
+            try:
+                parser.add_argument(
+                    command_line_key,
+                    type=type(value),
+                    dest=key,
+                )
+            except argparse.ArgumentError:
+                conflict_names.append(command_line_key)
+        if conflict_names:
+            if conflict == "pass":
+                return
+            if len(conflict_names) > 1:
+                msg = "conflicting option strings " + ", ".join(conflict_names)
+            else:
+                msg = "conflicting option string " + ", ".join(conflict_names)
+            if conflict == "raise":
+                raise ValueError(msg)
+            elif conflict == "warn":
+                warnings.warn(msg, stacklevel=3)
 
     def parse_args(
         self,
@@ -262,7 +279,7 @@ class Config(object):
             self.__dict__[key] = value
 
 
-def add_arguments(parser):
+def add_arguments(parser, conflict="warn", _stacklevel=3):
     """Add arguments to a given ArgumentParser
 
     Examples
@@ -280,7 +297,7 @@ def add_arguments(parser):
     parser : argparse.ArgumentParser
     """
     config = Config()
-    config.add_arguments(parser)
+    config.add_arguments(parser, conflict=conflict, _stacklevel=_stacklevel)
 
 
 if __name__ == "__main__":
