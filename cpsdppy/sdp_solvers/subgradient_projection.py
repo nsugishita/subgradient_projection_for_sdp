@@ -111,6 +111,10 @@ def run_subgradient_projection(prefix, problem_data, config):
 
 def _run_subgradient_projection_impl(problem_data, config):
     n_variables = problem_data["objective_coefficient"].size
+    constr_coefs = problem_data["lmi_constraint_coefficient"]
+    constr_offsets = problem_data["lmi_constraint_offset"]
+    constr_svec_coefs = problem_data["lmi_svec_constraint_coefficient"]
+    constr_svec_offset = problem_data["lmi_svec_constraint_offset"]
 
     journal = utils.IterationJournal()
 
@@ -119,10 +123,14 @@ def _run_subgradient_projection_impl(problem_data, config):
         best_lb=dict(default=np.nan, timing=True),
         lb_gap=dict(default=np.nan, timing=True),
         step_size=dict(default=np.nan, timing=False),
-        solution=dict(default=np.full(n_variables, np.nan), timing=True),
-        solution_objective_value=dict(default=np.nan, timing=True),
-        solution_objective_value_gap=dict(default=np.nan, timing=True),
-        solution_constraint_violation=dict(default=np.nan, timing=True),
+        x=dict(default=np.full(n_variables, np.nan), timing=True),
+        fx=dict(default=np.nan, timing=True),
+        fx_gap=dict(default=np.nan, timing=True),
+        gx=dict(default=np.full(len(constr_svec_coefs), np.nan), timing=True),
+        v=dict(default=np.full(n_variables, np.nan), timing=True),
+        fv=dict(default=np.nan, timing=True),
+        fv_gap=dict(default=np.nan, timing=True),
+        gv=dict(default=np.full(len(constr_svec_coefs), np.nan), timing=True),
         regularised_rmp_n_linear_cuts=dict(default=-1, timing=False),
         regularised_rmp_n_lmi_cuts=dict(default=-1, timing=False),
         unregularised_rmp_n_linear_cuts=dict(default=-1, timing=False),
@@ -149,11 +157,6 @@ def _run_subgradient_projection_impl(problem_data, config):
     )
     reg_lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(regularised_model)
     unreg_lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(unregularised_model)
-
-    constr_coefs = problem_data["lmi_constraint_coefficient"]
-    constr_offsets = problem_data["lmi_constraint_offset"]
-    constr_svec_coefs = problem_data["lmi_svec_constraint_coefficient"]
-    constr_svec_offset = problem_data["lmi_svec_constraint_offset"]
 
     assert config.initial_cut_type in ["linear", "lmi", "none"]
     for coef_i in range(len(constr_svec_coefs)):
@@ -211,9 +214,12 @@ def _run_subgradient_projection_impl(problem_data, config):
             unregularised_rmp_n_lmi_cuts=unreg_lmi_cuts.n,
         )
 
+        # TODO Extract the routine to compute objective and constraint values.
+
         matrices = []
         eigenvectors = []
         eigenvalues = []
+        gx = []
 
         for coef_i in range(len(constr_svec_coefs)):
             matrix = cpsdppy.linalg.svec_inv(
@@ -224,12 +230,20 @@ def _run_subgradient_projection_impl(problem_data, config):
             w, v = np.linalg.eigh(matrix)
             eigenvalues.append(w)
             eigenvectors.append(v)
+            gx.append(-w[0])
 
         coef_i = np.argmin([i[0] for i in eigenvalues])
 
         matrix = matrices[coef_i]
         w = eigenvalues[coef_i]
         v = eigenvectors[coef_i]
+
+        fx = objective_coef @ x
+        fx_gap = gap(
+            fx,
+            problem_data["target_objective"],
+            problem_data["target_objective"],
+        )
 
         if config.eval_lb_every > 0:
             add_cuts(
@@ -257,8 +271,6 @@ def _run_subgradient_projection_impl(problem_data, config):
             config.n_lmi_cuts_for_regularised_rmp,
         )
 
-        # obj = objective_coef @ x
-        constr = -w[0]
         n_reg_linear_cuts = reg_linear_cuts.n
         n_reg_lmi_cuts = reg_lmi_cuts.n
         n_unreg_linear_cuts = unreg_linear_cuts.n
@@ -272,25 +284,31 @@ def _run_subgradient_projection_impl(problem_data, config):
         np.testing.assert_equal(subgrad.ndim, 1)
         relaxation_parameter = 1.0
         if funcval > 0:
-            x = (
+            v = (
                 x
                 - relaxation_parameter
                 * funcval
                 * subgrad
                 / np.linalg.norm(subgrad) ** 2
             )
-        x = reg.project(x)
+        else:
+            v = x
+        v = reg.project(v)
 
-        x = x - reg.step_size * objective_coef
-        x = reg.project(x)
+        # TODO Compute the objetive value and constraint violation of v.
 
-        solution_objective_value = objective_coef @ x
-        solution_objective_value_gap = gap(
-            solution_objective_value,
-            problem_data["target_objective"],
-            problem_data["target_objective"],
-        )
-        solution_constraint_violation = constr
+        x = reg.project(v - reg.step_size * objective_coef)
+
+        # TODO Adjust step size.
+        # step_size_manager.feed(
+        #     x=x,
+        #     fx=fx,
+        #     gx=gx,
+        #     v=v,
+        #     fv=fv,
+        #     gv=gv,
+        # )
+        # reg.step_size = step_size_manager.step_size
 
         _lb_gap = gap(
             problem_data["target_objective"],
@@ -303,10 +321,10 @@ def _run_subgradient_projection_impl(problem_data, config):
             best_lb=best_lb,
             lb_gap=_lb_gap,
             step_size=reg.step_size,
-            solution=x,
-            solution_objective_value=solution_objective_value,
-            solution_objective_value_gap=solution_objective_value_gap,
-            solution_constraint_violation=solution_constraint_violation,
+            x=x,
+            fx=fx,
+            fx_gap=fx_gap,
+            gx=gx,
             regularised_rmp_n_linear_cuts=reg_linear_cuts.n,
             regularised_rmp_n_lmi_cuts=reg_lmi_cuts.n,
         )
@@ -330,10 +348,10 @@ def _run_subgradient_projection_impl(problem_data, config):
             f"{iteration:3d}",
             "  ",
             utils.format_elapse(timer.walltime),
-            f"  {format_number(solution_objective_value, width=11)}",
+            f"  {format_number(fx, width=11)}",
             " ",
-            f" {format_number(solution_objective_value_gap * 100, width=11)}",
-            f"  {format_number(solution_constraint_violation, width=8)}",
+            f" {format_number(fx_gap * 100, width=11)}",
+            f"  {format_number(np.max(gx), width=8)}",
             f"  {format_number(lb, width=11)}",
             lb_symbol,
             f" {format_number(_lb_gap * 100, width=11)}",
@@ -348,10 +366,10 @@ def _run_subgradient_projection_impl(problem_data, config):
 
         lb_closed = np.isfinite(_lb_gap) and (0 <= _lb_gap <= config.tol)
         solution_found = (
-            np.isfinite(solution_objective_value_gap)
+            np.isfinite(fx_gap)
             and (0 < config.tol)
-            and (solution_objective_value_gap <= config.tol)
-            and (solution_constraint_violation <= 1e-3)
+            and (fx_gap <= config.tol)
+            and (np.max(gx) <= 1e-3)
         )
         assert config.termination_criteria in [
             "lb_and_solution",
