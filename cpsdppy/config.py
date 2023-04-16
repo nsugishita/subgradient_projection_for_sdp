@@ -22,6 +22,8 @@ class Config(object):
         # Suboptimality tolerance. See 'termination_criteria'.
         self.tol: float = 1e-2
 
+        self.feas_tol: float = 1e-3
+
         # The condition to terminate solver.
         # {'lb_and_solution', 'solution', 'lb'}
         self.termination_criteria: str = "solution"

@@ -122,6 +122,9 @@ def _run_subgradient_projection_impl(problem_data, config):
         lb=dict(default=np.nan, timing=True),
         best_lb=dict(default=np.nan, timing=True),
         lb_gap=dict(default=np.nan, timing=True),
+        ub=dict(default=np.nan, timing=True),
+        best_ub=dict(default=np.nan, timing=True),
+        ub_gap=dict(default=np.nan, timing=True),
         step_size=dict(default=np.nan, timing=False),
         x=dict(default=np.full(n_variables, np.nan), timing=True),
         fx=dict(default=np.nan, timing=True),
@@ -170,6 +173,7 @@ def _run_subgradient_projection_impl(problem_data, config):
             )
 
     best_lb = -np.inf
+    best_ub = np.inf
 
     x = np.zeros(n_variables)
 
@@ -187,6 +191,30 @@ def _run_subgradient_projection_impl(problem_data, config):
             return np.inf
         return config.time_limit - timer.walltime
 
+    eval_res_t = collections.namedtuple(
+        "eval_res_t", "f f_gap g eigenvalues eigenvectors"
+    )
+
+    def evaluate_solution(x):
+        f = objective_coef @ x
+        f_gap = gap(
+            f,
+            problem_data["target_objective"],
+            problem_data["target_objective"],
+        )
+        eigenvalues = []
+        eigenvectors = []
+        for coef_i in range(len(constr_svec_coefs)):
+            matrix = cpsdppy.linalg.svec_inv(
+                constr_svec_coefs[coef_i] @ x - constr_svec_offset[coef_i],
+                part="f",
+            )
+            _eigenvalues, _eigenvectors = np.linalg.eigh(matrix)
+            eigenvalues.append(_eigenvalues)
+            eigenvectors.append(_eigenvectors)
+        g = np.array([-_eigenvalues[0] for _eigenvalues in eigenvalues])
+        return eval_res_t(f, f_gap, g, eigenvalues, eigenvectors)
+
     for iteration in range(1000):
         if 0 < iteration <= config.iteration_limit:
             solver_status = "iteration_limit"
@@ -201,6 +229,7 @@ def _run_subgradient_projection_impl(problem_data, config):
         unreg_linear_cuts.iteration = iteration
         unreg_lmi_cuts.iteration = iteration
         lb = -np.inf
+        ub = np.inf
 
         if (config.eval_lb_every > 0) and (
             iteration % config.eval_lb_every == 0
@@ -214,47 +243,22 @@ def _run_subgradient_projection_impl(problem_data, config):
             unregularised_rmp_n_lmi_cuts=unreg_lmi_cuts.n,
         )
 
-        # TODO Extract the routine to compute objective and constraint values.
-
-        matrices = []
-        eigenvectors = []
-        eigenvalues = []
-        gx = []
-
-        for coef_i in range(len(constr_svec_coefs)):
-            matrix = cpsdppy.linalg.svec_inv(
-                constr_svec_coefs[coef_i] @ x - constr_svec_offset[coef_i],
-                part="f",
-            )
-            matrices.append(matrix)
-            w, v = np.linalg.eigh(matrix)
-            eigenvalues.append(w)
-            eigenvectors.append(v)
-            gx.append(-w[0])
-
-        coef_i = np.argmin([i[0] for i in eigenvalues])
-
-        matrix = matrices[coef_i]
-        w = eigenvalues[coef_i]
-        v = eigenvectors[coef_i]
-
-        fx = objective_coef @ x
-        fx_gap = gap(
-            fx,
-            problem_data["target_objective"],
-            problem_data["target_objective"],
-        )
+        eval_x = evaluate_solution(x)
+        most_violated_constr_index = np.argmax(eval_x.g)
+        if np.max(eval_x.g) <= config.feas_tol:
+            ub = min(ub, eval_x.f)
+            best_ub = min(ub, best_ub)
 
         if config.eval_lb_every > 0:
             add_cuts(
                 config,
                 unreg_linear_cuts,
                 unreg_lmi_cuts,
-                constr_svec_coefs[coef_i],
-                constr_svec_offset[coef_i],
+                constr_svec_coefs[most_violated_constr_index],
+                constr_svec_offset[most_violated_constr_index],
                 x,
-                w,
-                v,
+                eval_x.eigenvalues[most_violated_constr_index],
+                eval_x.eigenvectors[most_violated_constr_index],
                 config.n_linear_cuts_for_unregularised_rmp,
                 config.n_lmi_cuts_for_unregularised_rmp,
             )
@@ -262,11 +266,11 @@ def _run_subgradient_projection_impl(problem_data, config):
             config,
             reg_linear_cuts,
             reg_lmi_cuts,
-            constr_svec_coefs[coef_i],
-            constr_svec_offset[coef_i],
+            constr_svec_coefs[most_violated_constr_index],
+            constr_svec_offset[most_violated_constr_index],
             x,
-            w,
-            v,
+            eval_x.eigenvalues[most_violated_constr_index],
+            eval_x.eigenvectors[most_violated_constr_index],
             config.n_linear_cuts_for_regularised_rmp,
             config.n_lmi_cuts_for_regularised_rmp,
         )
@@ -277,10 +281,11 @@ def _run_subgradient_projection_impl(problem_data, config):
         n_unreg_lmi_cuts = unreg_lmi_cuts.n
 
         # Do subgradient projection.
-        funcval = -w[0]
-        v0v0t = cpsdppy.linalg.svec(v[:, 0, None] @ v[None, :, 0])
+        funcval = eval_x.g[most_violated_constr_index]
+        vec = eval_x.eigenvectors[most_violated_constr_index][:, 0]
+        v0v0t = cpsdppy.linalg.svec(vec[:, None] @ vec[None, :])
         np.testing.assert_equal(v0v0t.ndim, 1)
-        subgrad = -v0v0t @ constr_svec_coefs[coef_i]
+        subgrad = -v0v0t @ constr_svec_coefs[most_violated_constr_index]
         np.testing.assert_equal(subgrad.ndim, 1)
         relaxation_parameter = 1.0
         if funcval > 0:
@@ -295,14 +300,18 @@ def _run_subgradient_projection_impl(problem_data, config):
             v = x
         v = reg.project(v)
 
-        # TODO Compute the objetive value and constraint violation of v.
+        # Compute the objetive value and constraint violation of v.
+        eval_v = evaluate_solution(v)
+        if np.max(eval_v.g) <= config.feas_tol:
+            ub = min(ub, eval_v.f)
+            best_ub = min(ub, best_ub)
 
         x = reg.project(v - reg.step_size * objective_coef)
 
         # TODO Adjust step size.
         # step_size_manager.feed(
         #     x=x,
-        #     fx=fx,
+        #     fx=f,
         #     gx=gx,
         #     v=v,
         #     fv=fv,
@@ -311,8 +320,13 @@ def _run_subgradient_projection_impl(problem_data, config):
         # reg.step_size = step_size_manager.step_size
 
         _lb_gap = gap(
-            problem_data["target_objective"],
             best_lb,
+            problem_data["target_objective"],
+            problem_data["target_objective"],
+        )
+        _ub_gap = gap(
+            best_ub,
+            problem_data["target_objective"],
             problem_data["target_objective"],
         )
 
@@ -320,11 +334,18 @@ def _run_subgradient_projection_impl(problem_data, config):
             lb=lb,
             best_lb=best_lb,
             lb_gap=_lb_gap,
+            ub=ub,
+            best_ub=best_ub,
+            ub_gap=_ub_gap,
             step_size=reg.step_size,
             x=x,
-            fx=fx,
-            fx_gap=fx_gap,
-            gx=gx,
+            fx=eval_x.f,
+            fx_gap=eval_x.f_gap,
+            gx=eval_x.g,
+            v=v,
+            fv=eval_v.f,
+            fv_gap=eval_v.f_gap,
+            gv=eval_v.g,
             regularised_rmp_n_linear_cuts=reg_linear_cuts.n,
             regularised_rmp_n_lmi_cuts=reg_lmi_cuts.n,
         )
@@ -332,15 +353,19 @@ def _run_subgradient_projection_impl(problem_data, config):
         head = [
             f"{'it':>3s}",
             f"  {'elapse':>8s}",
-            f"  {'fx':>11s}",
+            # f"  {'fx':>11s}",
             f"  {'fx_gap (%)':>11s}",
-            f"  {'viol':>8s}",
-            f"  {'lb':>11s}",
+            f"  {'|gx|_inf':>8s}",
+            # f"  {'fv':>11s}",
+            f"  {'fv_gap (%)':>11s}",
+            f"  {'|gv|_inf':>8s}",
+            # f"  {'ub_gap (%)':>11s}",
+            # f"  {'lb':>11s}",
             f"  {'lb_gap (%)':>11s}",
             f"  {'rcols':>5s}",
             f"  {'ucols':>5s}",
         ]
-        lb_symbol = " "
+        # lb_symbol = " "
         n_rcuts = n_reg_linear_cuts + n_reg_lmi_cuts
         n_ucuts = n_unreg_linear_cuts + n_unreg_lmi_cuts
         format_number = utils.format_number
@@ -348,13 +373,16 @@ def _run_subgradient_projection_impl(problem_data, config):
             f"{iteration:3d}",
             "  ",
             utils.format_elapse(timer.walltime),
-            f"  {format_number(fx, width=11)}",
-            " ",
-            f" {format_number(fx_gap * 100, width=11)}",
-            f"  {format_number(np.max(gx), width=8)}",
-            f"  {format_number(lb, width=11)}",
-            lb_symbol,
-            f" {format_number(_lb_gap * 100, width=11)}",
+            # f"  {format_number(eval_x.f, width=11)}",
+            f"  {format_number(eval_x.f_gap * 100, width=11)}",
+            f"  {format_number(np.max(eval_x.g), width=8)}",
+            # f"  {format_number(eval_v.f, width=11)}",
+            f"  {format_number(eval_v.f_gap * 100, width=11)}",
+            f"  {format_number(np.max(eval_v.g), width=8)}",
+            # f"  {format_number(_ub_gap * 100, width=11)}",
+            # f"  {format_number(lb, width=11)}",
+            # lb_symbol,
+            f"  {format_number(-_lb_gap * 100, width=11)}",
             f"  {n_rcuts:5d}",
             f"  {n_ucuts:5d}",
         ]
@@ -364,12 +392,18 @@ def _run_subgradient_projection_impl(problem_data, config):
             logger.debug("".join(head))
         logger.info("".join(body))
 
-        lb_closed = np.isfinite(_lb_gap) and (0 <= _lb_gap <= config.tol)
+        lb_closed = np.isfinite(_lb_gap) and (0 <= -_lb_gap <= config.tol)
         solution_found = (
-            np.isfinite(fx_gap)
+            np.isfinite(eval_x.f_gap)
             and (0 < config.tol)
-            and (fx_gap <= config.tol)
-            and (np.max(gx) <= 1e-3)
+            and (eval_x.f_gap <= config.tol)
+            and (np.max(eval_x.g) <= config.feas_tol)
+        )
+        solution_found |= (
+            np.isfinite(eval_v.f_gap)
+            and (0 < config.tol)
+            and (eval_v.f_gap <= config.tol)
+            and (np.max(eval_v.g) <= config.feas_tol)
         )
         assert config.termination_criteria in [
             "lb_and_solution",
@@ -503,11 +537,11 @@ def run_column_generation(problem_data, config):
         )
 
         _lb_gap = gap(
-            problem_data["target_objective"],
             best_lb,
             problem_data["target_objective"],
+            problem_data["target_objective"],
         )
-        if np.isfinite(_lb_gap) and (0 <= _lb_gap <= config.tol):
+        if np.isfinite(_lb_gap) and (0 <= -_lb_gap <= config.tol):
             solver_status = "gap_closed"
             break
 
@@ -765,13 +799,13 @@ def main() -> None:
                 )
 
                 res = results[prefix]
-                y = -res["iter_lb_gap"] * 100
-                x = res["iter_lb_gap_time"]
+                y = res["iter_lb_gap"][1:] * 100
+                x = res["iter_lb_gap_time"][1:]
                 ax.plot(x, y, color=f"C{setup_i}", label=str(setup))
                 x = np.arange(len(y)) + 1
                 ax_it.plot(x, y, color=f"C{setup_i}", label=str(setup))
-                y = res["iter_solution_objective_value_gap"] * 100
-                x = res["iter_solution_objective_value_gap_time"]
+                y = res["iter_fv_gap"][1:] * 100
+                x = res["iter_fv_gap_time"][1:]
                 ax.plot(x, y, color=f"C{setup_i}")
                 ax.plot(x, y, color=f"C{setup_i}")
                 x = np.arange(len(y)) + 1
