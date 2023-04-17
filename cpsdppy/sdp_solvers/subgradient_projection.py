@@ -217,7 +217,7 @@ def _run_subgradient_projection_impl(problem_data, config):
         return eval_res_t(f, f_gap, g, eigenvalues, eigenvectors)
 
     for iteration in range(1000):
-        if 0 < iteration <= config.iteration_limit:
+        if 0 < config.iteration_limit <= iteration:
             solver_status = "iteration_limit"
             break
         if 0 < config.time_limit <= timer.walltime:
