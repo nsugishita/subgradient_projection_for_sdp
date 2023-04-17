@@ -75,7 +75,6 @@ This constraint can be written as SOCP.
 
 import logging
 import os
-import shutil
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -83,12 +82,15 @@ import numpy as np
 
 import cpsdppy
 
+# import shutil
+
+
 logger = logging.getLogger(__name__)
 
 plot_dir = "tmp/circle_sdp"
 
-if os.path.exists(plot_dir):
-    shutil.rmtree(plot_dir)
+# if os.path.exists(plot_dir):
+#     shutil.rmtree(plot_dir)
 os.makedirs(plot_dir, exist_ok=True)
 
 grid_size = 300
@@ -100,6 +102,7 @@ def main():
     logging.getLogger().setLevel(logging.INFO)
 
     problem_names = "abcd"
+    problem_names = "cd"
     for problem_name in problem_names:
         print(f"{problem_name=}  {'linear_cuts'}")
         problem_data = get_problem_data(problem_name)
@@ -153,22 +156,22 @@ def get_problem_data(problem_name):
         )
 
     elif problem_name == "c":
-        objective_coef = np.array([-1, 0])
+        objective_coef = np.array([0, 1.0])
         a = np.array(
-            [
-                [0, 0, 1, 0],
-                [0, 0, -1, 1],
-                [1, -1, 0, 0],
-                [0, 1, 0, 0],
-            ],
-            dtype=float,
-        )
-        b = np.array(
             [
                 [0, 1, 0, -1],
                 [1, 0, 1, 0],
                 [0, 1, 0, 1],
                 [-1, 0, 1, 0],
+            ],
+            dtype=float,
+        )
+        b = np.array(
+            [
+                [0, 0, -1, 0],
+                [0, 0, 1, -1],
+                [-1, 1, 0, 0],
+                [0, -1, 0, 0],
             ],
             dtype=float,
         )
@@ -211,6 +214,20 @@ def get_problem_data(problem_name):
             ],
             dtype=float,
         )
+
+    elif problem_name == "e":
+        objective_coef = np.array([0.0, 1.0])
+        rng = np.random.RandomState(0)
+        n = 10
+        a = rng.normal(size=(n, n)) / np.sqrt(n)
+        for i in range(n):
+            for j in range(i, n):
+                a[i, j] = a[j, i]
+        b = rng.normal(size=(n, n)) / np.sqrt(n)
+        for i in range(n):
+            for j in range(i, n):
+                b[i, j] = b[j, i]
+        c = -np.eye(n)
 
     constr_coefs = np.stack([a, b])
     constr_offset = c
