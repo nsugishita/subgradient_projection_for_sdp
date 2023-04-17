@@ -21,7 +21,7 @@ from cpsdppy import utils
 
 logger = logging.getLogger(__name__)
 
-use_cache = False
+use_cache = True
 
 
 def gap(a: float, b: float, c: float) -> float:
@@ -475,20 +475,16 @@ class StepSizeManager:
         v_x = np.linalg.norm(v - x, ord=2)
 
         if iter <= warmup:
-            accepted = True
             step_size_adjustament = "none"
         elif v_x <= self.config.feas_tol:
-            accepted = True
             step_size_adjustament = "increase"
         elif np.all(self.gv[warmup:] > 1e-3):
-            accepted = self.gv[-1] <= np.min(self.gv[warmup:-1])
             step_size_adjustament = "decrease"
         else:
             score = self.fv.copy()
             score[:warmup] = np.inf
             score[self.gv > self.config.feas_tol] = np.inf
-            accepted = score[-1] <= np.min(score[:-1])
-            if accepted:
+            if score[-1] <= np.min(score[:-1]):
                 step_size_adjustament = "increase"
             else:
                 step_size_adjustament = "decrease"
@@ -800,13 +796,13 @@ def main() -> None:
         "--problem-names",
         type=str,
         nargs="+",
-        default=["theta1"],
+        default=["theta1", "theta2", "theta3"],
     )
     parser.add_argument(
         "--step-sizes",
         type=float,
         nargs="+",
-        default=[100],
+        default=[100, 1000],
     )
     cpsdppy.config.add_arguments(parser)
     args = parser.parse_args()
@@ -823,10 +819,16 @@ def main() -> None:
     logging.info(f"step sizes: {args.step_sizes}")
 
     setupt = collections.namedtuple("setup", ["cut_type", "lb"])
-    iter_base = itertools.product(
-        ["lmi", "linear", "combination"], [True, False]
-    )
+    iter_base = itertools.product(["lmi", "linear"], [True, False])
     iter = list(map(lambda x: setupt(*x), iter_base))
+
+    def label(setup):
+        return setup.cut_type
+
+    def color(setup):
+        return "C" + str(
+            ["lmi", "linear", "naivelinear"].index(setup.cut_type)
+        )
 
     for problem_name in args.problem_names:
         for step_size in args.step_sizes:
@@ -847,43 +849,41 @@ def main() -> None:
                     prefix, problem_data, config
                 )
 
-            fig, ax = plt.subplots()
-            fig_it, ax_it = plt.subplots()
+            figs = {}
+            axes = {}
+            figs[True], axes[True] = plt.subplots()
+            figs[False], axes[False] = plt.subplots()
             for setup_i, setup in enumerate(iter):
-                _, prefix = update_config(
+                config, prefix = update_config(
                     problem_name, base_config, step_size, setup
                 )
+                fig = figs[config.eval_lb_every > 0]
+                ax = axes[config.eval_lb_every > 0]
 
                 res = results[prefix]
                 y = res["iter_lb_gap"][1:] * 100
                 x = res["iter_lb_gap_time"][1:]
-                ax.plot(x, y, color=f"C{setup_i}", label=str(setup))
-                x = np.arange(len(y)) + 1
-                ax_it.plot(x, y, color=f"C{setup_i}", label=str(setup))
+                ax.plot(x, y, label=label(setup), color=color(setup))
                 y = res["iter_fv_gap"][1:] * 100
                 x = res["iter_fv_gap_time"][1:]
-                ax.plot(x, y, color=f"C{setup_i}")
-                ax.plot(x, y, color=f"C{setup_i}")
-                x = np.arange(len(y)) + 1
-                ax_it.plot(x, y, color=f"C{setup_i}")
-            ax.legend()
-            ax_it.legend()
-            ax.set_xlabel("elapse (seconds)")
-            ax.set_ylabel("suboptimality of bounds (%)")
-            ax_it.set_xlabel("iteration")
-            ax_it.set_ylabel("suboptimality of bounds (%)")
-            path = (
-                f"tmp/sdpa/{problem_name.split('.')[0]}_walltime_"
-                f"step_size_{step_size}.pdf"
-            )
-            fig.savefig(path, transparent=True)
-            print(path)
-            path = (
-                f"tmp/sdpa/{problem_name.split('.')[0]}_iteration_"
-                f"step_size_{step_size}.pdf"
-            )
-            fig_it.savefig(path, transparent=True)
-            print(path)
+                ax.plot(x, y, color=color(setup))
+                ax.plot(x, y, color=color(setup))
+            for i, (fig, ax) in enumerate(zip(figs.values(), axes.values())):
+                ax.legend()
+                ax.set_xlabel("elapse (seconds)")
+                if ax.get_ylim()[0] < -30:
+                    pass
+                else:
+                    ax.set_ylim(0, 20)
+                ax.set_ylabel("suboptimality of bounds (%)")
+                path = (
+                    f"tmp/sdpa/fig/{problem_name.split('.')[0]}_"
+                    f"step_size_{step_size}_walltime_"
+                    f"lb_{int(i)}.pdf"
+                )
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                fig.savefig(path, transparent=True)
+                print(path)
 
 
 def update_config(problem_name, base_config, step_size, setup):
@@ -901,13 +901,13 @@ def update_config(problem_name, base_config, step_size, setup):
         config.eigenvector_combination_cut = 0
         config.n_lmi_cuts_for_unregularised_rmp = 1
         config.n_lmi_cuts_for_regularised_rmp = 1
-    elif setup.cut_type == "linear":
+    elif setup.cut_type == "naivelinear":
         config.n_linear_cuts_for_unregularised_rmp = 1
         config.n_linear_cuts_for_regularised_rmp = 1
         config.eigenvector_combination_cut = 0
         config.n_lmi_cuts_for_unregularised_rmp = 0
         config.n_lmi_cuts_for_regularised_rmp = 0
-    elif setup.cut_type == "combination":
+    elif setup.cut_type == "linear":
         config.n_linear_cuts_for_unregularised_rmp = 1
         config.n_linear_cuts_for_regularised_rmp = 1
         config.eigenvector_combination_cut = 1
@@ -923,7 +923,7 @@ def update_config(problem_name, base_config, step_size, setup):
         config.n_linear_cuts_for_unregularised_rmp = 0
         config.n_lmi_cuts_for_unregularised_rmp = 0
 
-    prefix = f"{problem_name.split('.')[0]}_" f"{config.non_default_as_str()}"
+    prefix = f"{problem_name.split('.')[0]}_{config.non_default_as_str()}"
 
     return config, prefix
 
