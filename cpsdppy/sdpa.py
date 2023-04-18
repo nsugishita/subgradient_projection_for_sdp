@@ -67,10 +67,16 @@ def read(problem_name, config=None):
     >>> len(data['lmi_constraint_coefficient'])
     2
     """
-    if "." not in problem_name:
-        problem_name = problem_name + ".dat-s"
-    sdpa_data = _read(problem_name, config)
-    return _convert_sdpa_data_to_dict(problem_name, sdpa_data, config)
+    if isinstance(problem_name, dict):
+        _problem_name = problem_name["problem_name"]
+    elif hasattr(problem_name, "problem_name"):
+        _problem_name = getattr(problem_name, "problem_name")
+    else:
+        _problem_name = problem_name
+    if "." not in _problem_name:
+        _problem_name = _problem_name + ".dat-s"
+    sdpa_data = _read(_problem_name, config)
+    return _convert_sdpa_data_to_dict(_problem_name, sdpa_data, config)
 
 
 def _convert_sdpa_data_to_dict(problem_name, data, config):
