@@ -3,41 +3,18 @@
 """Subgradient projection solver"""
 
 
-import argparse
-import collections
-import itertools
 import logging
 import os
-import pickle
 
-import matplotlib.pyplot as plt
 import numpy as np
 
-import cpsdppy
-from cpsdppy import utils
+from cpsdppy import linalg, mip_solver_extensions, mip_solvers, utils
 from cpsdppy.sdp_solvers import common
 
 logger = logging.getLogger(__name__)
 
-use_cache = True
 
-
-def run(prefix, problem_data, config):
-    cache_path = f"tmp/sdpa/{prefix}.pkl"
-    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-    print(cache_path)
-    if os.path.exists(cache_path) and use_cache:
-        with open(cache_path, "rb") as f:
-            return pickle.load(f)
-
-    res = _run_impl(problem_data, config)
-
-    with open(cache_path, "wb") as f:
-        pickle.dump(res, f)
-    return res
-
-
-def _run_impl(problem_data, config):
+def run(problem_data, config):
     n_variables = problem_data["objective_coefficient"].size
     constr_coefs = problem_data["lmi_constraint_coefficient"]
     constr_offsets = problem_data["lmi_constraint_offset"]
@@ -68,26 +45,22 @@ def _run_impl(problem_data, config):
         unregularised_rmp_n_lmi_cuts=dict(default=-1, timing=False),
     )
 
-    regularised_model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
-    unregularised_model = cpsdppy.mip_solvers.gurobi.GurobiInterface()
+    regularised_model = mip_solvers.gurobi.GurobiInterface()
+    unregularised_model = mip_solvers.gurobi.GurobiInterface()
     xlb = problem_data["variable_lb"]
     xub = problem_data["variable_ub"]
     objective_coef = problem_data["objective_coefficient"]
     regularised_model.add_variables(lb=xlb, ub=xub, obj=objective_coef)
     unregularised_model.add_variables(lb=xlb, ub=xub, obj=objective_coef)
 
-    reg = cpsdppy.mip_solver_extensions.MoreuYoshidaRegularisation(
+    reg = mip_solver_extensions.MoreuYoshidaRegularisation(
         regularised_model, config=config
     )
     reg.step_size = config.step_size
-    reg_linear_cuts = cpsdppy.mip_solver_extensions.LinearCuts(
-        regularised_model
-    )
-    unreg_linear_cuts = cpsdppy.mip_solver_extensions.LinearCuts(
-        unregularised_model
-    )
-    reg_lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(regularised_model)
-    unreg_lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(unregularised_model)
+    reg_linear_cuts = mip_solver_extensions.LinearCuts(regularised_model)
+    unreg_linear_cuts = mip_solver_extensions.LinearCuts(unregularised_model)
+    reg_lmi_cuts = mip_solver_extensions.LMICuts(regularised_model)
+    unreg_lmi_cuts = mip_solver_extensions.LMICuts(unregularised_model)
 
     assert config.initial_cut_type in ["linear", "lmi", "none"]
     for coef_i in range(len(constr_svec_coefs)):
@@ -192,7 +165,7 @@ def _run_impl(problem_data, config):
         # Do subgradient projection.
         funcval = eval_x.g[most_violated_constr_index]
         vec = eval_x.eigenvectors[most_violated_constr_index][:, 0]
-        v0v0t = cpsdppy.linalg.svec(vec[:, None] @ vec[None, :])
+        v0v0t = linalg.svec(vec[:, None] @ vec[None, :])
         np.testing.assert_equal(v0v0t.ndim, 1)
         subgrad = -v0v0t @ constr_svec_coefs[most_violated_constr_index]
         np.testing.assert_equal(subgrad.ndim, 1)
@@ -405,145 +378,5 @@ class StepSizeManager:
                 self.step_size_factor -= self.shift
                 self.step_size_factor /= self.scale
 
-
-def main() -> None:
-    """Run the main routine of this script"""
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--problem-names",
-        type=str,
-        nargs="+",
-        default=["theta1"],
-    )
-    parser.add_argument(
-        "--step-sizes",
-        type=float,
-        nargs="+",
-        default=[100],
-    )
-    cpsdppy.config.add_arguments(parser)
-    args = parser.parse_args()
-
-    base_config = cpsdppy.config.Config()
-    base_config.time_limit = 60
-    base_config.parse_args(args)
-
-    handler = logging.StreamHandler()
-    logging.getLogger().addHandler(handler)
-    logging.getLogger().setLevel(logging.INFO)
-
-    logging.info(f"problem names: {args.problem_names}")
-    logging.info(f"step sizes: {args.step_sizes}")
-
-    setupt = collections.namedtuple("setup", ["cut_type", "lb"])
-    iter_base = itertools.product(["lmi", "linear"], [True, False])
-    iter = list(map(lambda x: setupt(*x), iter_base))
-
-    def label(setup):
-        return setup.cut_type
-
-    def color(setup):
-        return "C" + str(
-            ["lmi", "linear", "naivelinear"].index(setup.cut_type)
-        )
-
-    for problem_name in args.problem_names:
-        for step_size in args.step_sizes:
-            problem_data = cpsdppy.sdpa.read(problem_name)
-
-            results = dict()
-
-            for setup in iter:
-                logger.info("- " * 20)
-                logger.info(str(setup))
-                logger.info("- " * 20)
-
-                config, prefix = update_config(
-                    problem_name, base_config, step_size, setup
-                )
-
-                results[prefix] = run(prefix, problem_data, config)
-
-            figs = {}
-            axes = {}
-            figs[True], axes[True] = plt.subplots()
-            figs[False], axes[False] = plt.subplots()
-            for setup_i, setup in enumerate(iter):
-                config, prefix = update_config(
-                    problem_name, base_config, step_size, setup
-                )
-                fig = figs[config.eval_lb_every > 0]
-                ax = axes[config.eval_lb_every > 0]
-
-                res = results[prefix]
-                y = res["iter_lb_gap"][1:] * 100
-                x = res["iter_lb_gap_time"][1:]
-                ax.plot(x, y, label=label(setup), color=color(setup))
-                y = res["iter_fv_gap"][1:] * 100
-                x = res["iter_fv_gap_time"][1:]
-                ax.plot(x, y, color=color(setup))
-                ax.plot(x, y, color=color(setup))
-            for i, (fig, ax) in enumerate(zip(figs.values(), axes.values())):
-                ax.legend()
-                ax.set_xlabel("elapse (seconds)")
-                if ax.get_ylim()[0] < -30:
-                    pass
-                else:
-                    ax.set_ylim(0, 20)
-                ax.set_ylabel("suboptimality of bounds (%)")
-                path = (
-                    f"tmp/sdpa/fig/{problem_name.split('.')[0]}_"
-                    f"step_size_{step_size}_walltime_"
-                    f"lb_{int(i)}.pdf"
-                )
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-                fig.savefig(path, transparent=True)
-                print(path)
-
-
-def update_config(problem_name, base_config, step_size, setup):
-    config = base_config.copy()
-    config.step_size = step_size
-    if setup.lb:
-        config.initial_cut_type = (
-            "lmi" if setup.cut_type == "lmi" else "linear"
-        )
-    else:
-        config.initial_cut_type = "none"
-    if setup.cut_type == "lmi":
-        config.n_linear_cuts_for_unregularised_rmp = 0
-        config.n_linear_cuts_for_regularised_rmp = 0
-        config.eigenvector_combination_cut = 0
-        config.n_lmi_cuts_for_unregularised_rmp = 1
-        config.n_lmi_cuts_for_regularised_rmp = 1
-    elif setup.cut_type == "naivelinear":
-        config.n_linear_cuts_for_unregularised_rmp = 1
-        config.n_linear_cuts_for_regularised_rmp = 1
-        config.eigenvector_combination_cut = 0
-        config.n_lmi_cuts_for_unregularised_rmp = 0
-        config.n_lmi_cuts_for_regularised_rmp = 0
-    elif setup.cut_type == "linear":
-        config.n_linear_cuts_for_unregularised_rmp = 1
-        config.n_linear_cuts_for_regularised_rmp = 1
-        config.eigenvector_combination_cut = 1
-        config.n_lmi_cuts_for_unregularised_rmp = 0
-        config.n_lmi_cuts_for_regularised_rmp = 0
-
-    if setup.lb:
-        config.eval_lb_every = 1
-    else:
-        config.eval_lb_every = 0
-        config.n_linear_cuts_for_unregularised_rmp = 0
-        config.n_lmi_cuts_for_unregularised_rmp = 0
-        config.n_linear_cuts_for_unregularised_rmp = 0
-        config.n_lmi_cuts_for_unregularised_rmp = 0
-
-    prefix = f"{problem_name.split('.')[0]}_{config.non_default_as_str()}"
-
-    return config, prefix
-
-
-if __name__ == "__main__":
-    main()
 
 # vimquickrun: . ./scripts/activate.sh ; python %
