@@ -49,6 +49,15 @@ def run(problem_data, config):
     unreg_linear_cuts = mip_solver_extensions.LinearCuts(unregularised_model)
     unreg_lmi_cuts = mip_solver_extensions.LMICuts(unregularised_model)
 
+    if config.n_linear_cuts_for_unregularised_rmp >= 0:
+        n_unreg_linear_cuts = config.n_linear_cuts_for_unregularised_rmp
+    else:
+        n_unreg_linear_cuts = config.n_linear_cuts
+    if config.n_lmi_cuts_for_unregularised_rmp >= 0:
+        n_unreg_lmi_cuts = config.n_lmi_cuts_for_unregularised_rmp
+    else:
+        n_unreg_lmi_cuts = config.n_lmi_cuts
+
     assert config.initial_cut_type in ["linear", "lmi", "none"]
     for coef_i in range(len(constr_svec_coefs)):
         if config.initial_cut_type == "linear":
@@ -71,15 +80,6 @@ def run(problem_data, config):
 
     journal.start_hook()
     timer = utils.timer()
-
-    def remaining_time():
-        if config.time_limit is None:
-            return np.inf
-        if config.time_limit <= 0:
-            return np.inf
-        if not np.isfinite(config.time_limit):
-            return np.inf
-        return config.time_limit - timer.walltime
 
     for iteration in range(10000):
         if 0 < config.iteration_limit <= iteration:
@@ -120,12 +120,9 @@ def run(problem_data, config):
             x,
             eval_x.eigenvalues[most_violated_constr_index],
             eval_x.eigenvectors[most_violated_constr_index],
-            config.n_linear_cuts_for_unregularised_rmp,
-            config.n_lmi_cuts_for_unregularised_rmp,
+            n_unreg_linear_cuts,
+            n_unreg_lmi_cuts,
         )
-
-        n_unreg_linear_cuts = unreg_linear_cuts.n
-        n_unreg_lmi_cuts = unreg_lmi_cuts.n
 
         _lb_gap = common.gap(
             best_lb,
@@ -169,7 +166,7 @@ def run(problem_data, config):
         ]
         # lb_symbol = " "
         n_rcuts = 0
-        n_ucuts = n_unreg_linear_cuts + n_unreg_lmi_cuts
+        n_ucuts = unreg_linear_cuts.n + unreg_lmi_cuts.n
         format_number = utils.format_number
         body = [
             f"{iteration:3d}",

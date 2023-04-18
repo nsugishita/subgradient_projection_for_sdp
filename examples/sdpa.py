@@ -48,7 +48,7 @@ def main() -> None:
         "--problem-names",
         type=str,
         nargs="+",
-        default=["theta1", "theta2", "theta3"],
+        default=["theta1"],
     )
     parser.add_argument(
         "--step-sizes",
@@ -70,9 +70,23 @@ def main() -> None:
     logging.info(f"problem names: {args.problem_names}")
     logging.info(f"step sizes: {args.step_sizes}")
 
-    setupt = collections.namedtuple("setup", ["cut_type", "lb"])
-    iter_base = itertools.product(["lmi", "linear"], [True, False])
+    setupt = collections.namedtuple(
+        "setup", "cut_type n_cuts lmi_cuts_from_unique_vectors lb"
+    )
+    iter_base = itertools.product(
+        ["lmi", "linear"], [1, 2, 3, 4], [0, 1], [False]
+    )
     iter = list(map(lambda x: setupt(*x), iter_base))
+
+    def setup_filter(setup):
+        if setup.lmi_cuts_from_unique_vectors == 0:
+            if setup.cut_type == "linear":
+                return False
+            if setup.n_cuts <= 1:
+                return False
+        return True
+
+    iter = list(filter(setup_filter, iter))
 
     def label(setup):
         return setup.cut_type
@@ -156,33 +170,25 @@ def update_config(base_config, problem_name, step_size, setup):
         )
     else:
         config.initial_cut_type = "none"
+    n = setup.n_cuts
+    config.lmi_cuts_from_unique_vectors = setup.lmi_cuts_from_unique_vectors
     if setup.cut_type == "lmi":
-        config.n_linear_cuts_for_unregularised_rmp = 0
-        config.n_linear_cuts_for_regularised_rmp = 0
-        config.eigenvector_combination_cut = 0
-        config.n_lmi_cuts_for_unregularised_rmp = 1
-        config.n_lmi_cuts_for_regularised_rmp = 1
+        config.n_linear_cuts = 0
+        config.n_lmi_cuts = n
+        config.eigen_comb_cut = 0
     elif setup.cut_type == "naivelinear":
-        config.n_linear_cuts_for_unregularised_rmp = 1
-        config.n_linear_cuts_for_regularised_rmp = 1
-        config.eigenvector_combination_cut = 0
-        config.n_lmi_cuts_for_unregularised_rmp = 0
-        config.n_lmi_cuts_for_regularised_rmp = 0
+        config.n_linear_cuts = n
+        config.n_lmi_cuts = 0
+        config.eigen_comb_cut = 0
     elif setup.cut_type == "linear":
-        config.n_linear_cuts_for_unregularised_rmp = 1
-        config.n_linear_cuts_for_regularised_rmp = 1
-        config.eigenvector_combination_cut = 1
-        config.n_lmi_cuts_for_unregularised_rmp = 0
-        config.n_lmi_cuts_for_regularised_rmp = 0
+        config.n_linear_cuts = n
+        config.n_lmi_cuts = 0
+        config.eigen_comb_cut = 1
 
     if setup.lb:
         config.eval_lb_every = 1
     else:
         config.eval_lb_every = 0
-        config.n_linear_cuts_for_unregularised_rmp = 0
-        config.n_lmi_cuts_for_unregularised_rmp = 0
-        config.n_linear_cuts_for_unregularised_rmp = 0
-        config.n_lmi_cuts_for_unregularised_rmp = 0
 
     return config
 

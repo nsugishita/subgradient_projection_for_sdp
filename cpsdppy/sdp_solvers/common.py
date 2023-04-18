@@ -22,6 +22,16 @@ def gap(a: float, b: float, c: float) -> float:
         return np.nan
 
 
+def remaining_time(config, timer):
+    if config.time_limit is None:
+        return np.inf
+    if config.time_limit <= 0:
+        return np.inf
+    if not np.isfinite(config.time_limit):
+        return np.inf
+    return config.time_limit - timer.walltime
+
+
 def evaluate_solution(x, problem_data):
     """
     >>> import cpsdppy
@@ -272,8 +282,12 @@ def add_cuts(
     # TODO Improve efficiency using initialisation routine.
 
     for i in range(n_lmi_cuts):
-        v0 = v[:, 2 * i]
-        v1 = v[:, 2 * i + 1]
+        if config.lmi_cuts_from_unique_vectors:
+            v0 = v[:, 2 * i]
+            v1 = v[:, 2 * i + 1]
+        else:
+            v0 = v[:, i]
+            v1 = v[:, i + 1]
         v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
         v0v1t = (
             cpsdppy.linalg.svec(
@@ -300,13 +314,16 @@ def add_cuts(
         lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
 
     for i in range(n_linear_cuts):
-        v0 = v[:, i + 2 * n_lmi_cuts]
+        if config.lmi_cuts_from_unique_vectors:
+            v0 = v[:, i + 2 * n_lmi_cuts]
+        else:
+            v0 = v[:, i + n_lmi_cuts + 1]
         v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
         cut_coef = v0v0t @ constr_svec_coef
         cut_offset = v0v0t @ constr_svec_offset
         linear_cuts.add_linear_cuts(coef=-cut_coef, offset=-cut_offset)
 
-    if config.eigenvector_combination_cut:
+    if config.eigen_comb_cut:
         v0 = np.sum(np.clip(w, None, 0.0) * v, axis=1)
         norm = np.linalg.norm(v0)
         if norm != 0:
@@ -314,48 +331,6 @@ def add_cuts(
             cut_coef = v0v0t @ constr_svec_coef
             cut_offset = v0v0t @ constr_svec_offset
             linear_cuts.add_linear_cuts(coef=-cut_coef, offset=-cut_offset)
-
-
-def update_config(problem_name, base_config, step_size, setup):
-    config = base_config.copy()
-    config.step_size = step_size
-    if setup.lb:
-        config.initial_cut_type = (
-            "lmi" if setup.cut_type == "lmi" else "linear"
-        )
-    else:
-        config.initial_cut_type = "none"
-    if setup.cut_type == "lmi":
-        config.n_linear_cuts_for_unregularised_rmp = 0
-        config.n_linear_cuts_for_regularised_rmp = 0
-        config.eigenvector_combination_cut = 0
-        config.n_lmi_cuts_for_unregularised_rmp = 1
-        config.n_lmi_cuts_for_regularised_rmp = 1
-    elif setup.cut_type == "naivelinear":
-        config.n_linear_cuts_for_unregularised_rmp = 1
-        config.n_linear_cuts_for_regularised_rmp = 1
-        config.eigenvector_combination_cut = 0
-        config.n_lmi_cuts_for_unregularised_rmp = 0
-        config.n_lmi_cuts_for_regularised_rmp = 0
-    elif setup.cut_type == "linear":
-        config.n_linear_cuts_for_unregularised_rmp = 1
-        config.n_linear_cuts_for_regularised_rmp = 1
-        config.eigenvector_combination_cut = 1
-        config.n_lmi_cuts_for_unregularised_rmp = 0
-        config.n_lmi_cuts_for_regularised_rmp = 0
-
-    if setup.lb:
-        config.eval_lb_every = 1
-    else:
-        config.eval_lb_every = 0
-        config.n_linear_cuts_for_unregularised_rmp = 0
-        config.n_lmi_cuts_for_unregularised_rmp = 0
-        config.n_linear_cuts_for_unregularised_rmp = 0
-        config.n_lmi_cuts_for_unregularised_rmp = 0
-
-    prefix = f"{problem_name.split('.')[0]}_{config.non_default_as_str()}"
-
-    return config, prefix
 
 
 if __name__ == "__main__":
