@@ -70,14 +70,6 @@ def main() -> None:
     logging.info(f"problem names: {args.problem_names}")
     logging.info(f"step sizes: {args.step_sizes}")
 
-    setupt = collections.namedtuple(
-        "setup", "cut_type n_cuts lmi_cuts_from_unique_vectors lb"
-    )
-    iter_base = itertools.product(
-        ["lmi", "linear"], [1, 2, 3, 4], [0, 1], [False]
-    )
-    iter = list(map(lambda x: setupt(*x), iter_base))
-
     def setup_filter(setup):
         if setup.lmi_cuts_from_unique_vectors == 0:
             if setup.cut_type == "linear":
@@ -86,7 +78,24 @@ def main() -> None:
                 return False
         return True
 
-    iter = list(filter(setup_filter, iter))
+    setups = list(
+        namedtuples_from_product(
+            "setup",
+            "problem_name",
+            args.problem_names,
+            "step_size",
+            args.step_sizes,
+            "cut_type",
+            ["lmi", "linear"],
+            "n_cuts",
+            [1, 2, 3, 4],
+            "lmi_cuts_from_unique_vectors",
+            [0, 1],
+            "lb",
+            [False],
+        )
+    )
+    setups = list(filter(setup_filter, setups))
 
     def label(setup):
         return setup.cut_type
@@ -96,74 +105,81 @@ def main() -> None:
             ["lmi", "linear", "naivelinear"].index(setup.cut_type)
         )
 
-    for problem_name in args.problem_names:
-        for step_size in args.step_sizes:
-            problem_data = sdpa.read(problem_name)
+    results = dict()
 
-            results = dict()
+    for setup in setups:
+        logger.info("- " * 20)
+        logger.info(str(setup))
+        logger.info("- " * 20)
 
-            for setup in iter:
-                logger.info("- " * 20)
-                logger.info(str(setup))
-                logger.info("- " * 20)
+        config = update_config(base_config, setup)
+        problem_data = sdpa.read(config)
 
-                config = update_config(
-                    base_config, problem_name, step_size, setup
-                )
+        config.solver = "subgradient_projection"
+        results[config.non_default_as_str()] = run(problem_data, config)
 
-                config.solver = "subgradient_projection"
-                results[config.non_default_as_str()] = run(
-                    problem_data, config
-                )
-                if setup.lb:
-                    config.solver = "cutting_plane"
-                    results[config.non_default_as_str()] = run(
-                        problem_data, config
-                    )
+        if setup.lb:
+            config.solver = "cutting_plane"
+            results[config.non_default_as_str()] = run(problem_data, config)
 
-            figs = {}
-            axes = {}
-            figs[True], axes[True] = plt.subplots()
-            figs[False], axes[False] = plt.subplots()
-            for setup_i, setup in enumerate(iter):
-                config = update_config(
-                    base_config, problem_name, step_size, setup
-                )
-                config.solver = "subgradient_projection"
-                res = results[config.non_default_as_str()]
+    figs = {}
+    axes = {}
 
-                fig = figs[config.eval_lb_every > 0]
-                ax = axes[config.eval_lb_every > 0]
+    fig_keys = list(
+        namedtuples_from_product(
+            "fig_key",
+            "problem_name",
+            args.problem_names,
+            "step_size",
+            args.step_sizes,
+            "lb",
+            [True, False],
+        )
+    )
+    for key in fig_keys:
+        figs[key], axes[key] = plt.subplots()
 
-                y = res["iter_lb_gap"][1:] * 100
-                x = res["iter_lb_gap_time"][1:]
-                ax.plot(x, y, label=label(setup), color=color(setup))
-                y = res["iter_fv_gap"][1:] * 100
-                x = res["iter_fv_gap_time"][1:]
-                ax.plot(x, y, color=color(setup))
-                ax.plot(x, y, color=color(setup))
-            for i, (fig, ax) in enumerate(zip(figs.values(), axes.values())):
-                ax.legend()
-                ax.set_xlabel("elapse (seconds)")
-                if ax.get_ylim()[0] < -30:
-                    pass
-                else:
-                    ax.set_ylim(0, 20)
-                ax.set_ylabel("suboptimality of bounds (%)")
-                path = (
-                    f"tmp/sdpa/fig/{problem_name.split('.')[0]}_"
-                    f"step_size_{step_size}_walltime_"
-                    f"lb_{int(i)}.pdf"
-                )
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-                fig.savefig(path, transparent=True)
-                print(path)
+    def from_setup_to_fig_key(setup):
+        return setup.problem_name, setup.step_size, setup.lb
+
+    for setup in setups:
+        fig_key = from_setup_to_fig_key(setup)
+        fig, ax = figs[fig_key], axes[fig_key]
+
+        config = update_config(base_config, setup)
+        config.solver = "subgradient_projection"
+        res = results[config.non_default_as_str()]
+
+        y = res["iter_lb_gap"][1:] * 100
+        x = res["iter_lb_gap_time"][1:]
+        ax.plot(x, y, label=label(setup), color=color(setup))
+        y = res["iter_fv_gap"][1:] * 100
+        x = res["iter_fv_gap_time"][1:]
+        ax.plot(x, y, color=color(setup))
+        ax.plot(x, y, color=color(setup))
+    for fig_key in fig_keys:
+        fig, ax = figs[fig_key], axes[fig_key]
+        ax.legend()
+        ax.set_xlabel("elapse (seconds)")
+        if fig_key.lb:
+            pass
+        else:
+            ax.set_ylim(0, 20)
+        ax.set_ylabel("suboptimality of bounds (%)")
+        path = (
+            f"tmp/sdpa/fig/{fig_key.problem_name.split('.')[0]}_"
+            f"step_size_{fig_key.step_size}_walltime_"
+            f"lb_{int(fig_key.lb)}.pdf"
+        )
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        fig.savefig(path, transparent=True)
+        print(path)
 
 
-def update_config(base_config, problem_name, step_size, setup):
+def update_config(base_config, setup):
     config = base_config.copy()
-    config.problem_name = problem_name
-    config.step_size = step_size
+    config.problem_name = setup.problem_name
+    config.step_size = setup.step_size
     if setup.lb:
         config.initial_cut_type = (
             "lmi" if setup.cut_type == "lmi" else "linear"
@@ -193,7 +209,36 @@ def update_config(base_config, problem_name, step_size, setup):
     return config
 
 
+def namedtuples_from_product(name, *args):
+    """Create a sequence of namedtuples from the products of given items
+
+    Examples
+    --------
+    >>> a = namedtuples_from_product(
+    ...     "items", "name", ["foo", "bar"], "age", [10, 20, 30])
+    >>> for x in a:
+    ...     print(x)
+    items(name='foo', age=10)
+    items(name='foo', age=20)
+    items(name='foo', age=30)
+    items(name='bar', age=10)
+    items(name='bar', age=20)
+    items(name='bar', age=30)
+    """
+    assert len(args) % 2 == 0
+    # Extract the filed names as a tuple.
+    field_names = args[0::2]
+    tpl = collections.namedtuple(name, field_names)
+    # Create a generator to yield each combination as a normal tuple.
+    iter_base = itertools.product(*args[1::2])
+    # Create a list of namedtuples.
+    return map(lambda x: tpl(*x), iter_base)
+
+
 if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
     main()
 
 # vimquickrun: . ./scripts/activate.sh ; python %
