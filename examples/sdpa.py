@@ -20,18 +20,18 @@ logger = logging.getLogger(__name__)
 use_cache = True
 
 
-def run(type, prefix, problem_data, config):
-    assert type in ["subgradient_projection", "cutting_plane"]
-    cache_path = f"tmp/sdpa/{type}_{prefix}.pkl"
+def run(problem_data, config):
+    assert config.solver in ["subgradient_projection", "cutting_plane"]
+    cache_path = f"tmp/sdpa/cache/{config.non_default_as_str()}.pkl"
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
     print(cache_path)
     if os.path.exists(cache_path) and use_cache:
         with open(cache_path, "rb") as f:
             return pickle.load(f)
 
-    if type == "subgradient_projection":
+    if config.solver == "subgradient_projection":
         res = subgradient_projection.run(problem_data, config)
-    elif type == "cutting_plane":
+    elif config.solver == "cutting_plane":
         res = cutting_plane.run(problem_data, config)
     else:
         raise ValueError
@@ -48,7 +48,7 @@ def main() -> None:
         "--problem-names",
         type=str,
         nargs="+",
-        default=["theta1"],
+        default=["theta1", "theta2", "theta3"],
     )
     parser.add_argument(
         "--step-sizes",
@@ -93,16 +93,18 @@ def main() -> None:
                 logger.info(str(setup))
                 logger.info("- " * 20)
 
-                config, prefix = update_config(
-                    problem_name, base_config, step_size, setup
+                config = update_config(
+                    base_config, problem_name, step_size, setup
                 )
 
-                results["sub", prefix] = run(
-                    "subgradient_projection", prefix, problem_data, config
+                config.solver = "subgradient_projection"
+                results[config.non_default_as_str()] = run(
+                    problem_data, config
                 )
                 if setup.lb:
-                    results["cp", prefix] = run(
-                        "cutting_plane", prefix, problem_data, config
+                    config.solver = "cutting_plane"
+                    results[config.non_default_as_str()] = run(
+                        problem_data, config
                     )
 
             figs = {}
@@ -110,13 +112,15 @@ def main() -> None:
             figs[True], axes[True] = plt.subplots()
             figs[False], axes[False] = plt.subplots()
             for setup_i, setup in enumerate(iter):
-                config, prefix = update_config(
-                    problem_name, base_config, step_size, setup
+                config = update_config(
+                    base_config, problem_name, step_size, setup
                 )
+                config.solver = "subgradient_projection"
+                res = results[config.non_default_as_str()]
+
                 fig = figs[config.eval_lb_every > 0]
                 ax = axes[config.eval_lb_every > 0]
 
-                res = results["sub", prefix]
                 y = res["iter_lb_gap"][1:] * 100
                 x = res["iter_lb_gap_time"][1:]
                 ax.plot(x, y, label=label(setup), color=color(setup))
@@ -142,8 +146,9 @@ def main() -> None:
                 print(path)
 
 
-def update_config(problem_name, base_config, step_size, setup):
+def update_config(base_config, problem_name, step_size, setup):
     config = base_config.copy()
+    config.problem_name = problem_name
     config.step_size = step_size
     if setup.lb:
         config.initial_cut_type = (
@@ -179,9 +184,7 @@ def update_config(problem_name, base_config, step_size, setup):
         config.n_linear_cuts_for_unregularised_rmp = 0
         config.n_lmi_cuts_for_unregularised_rmp = 0
 
-    prefix = f"{problem_name.split('.')[0]}_{config.non_default_as_str()}"
-
-    return config, prefix
+    return config
 
 
 if __name__ == "__main__":

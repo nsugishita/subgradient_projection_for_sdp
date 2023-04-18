@@ -19,6 +19,9 @@ class Config(object):
         """Initialise a Config instance"""
         self.verbose: int = 0
 
+        self.problem_name: str = ""
+        self.solver: str = ""
+
         # Suboptimality tolerance. See 'termination_criteria'.
         self.tol: float = 1e-2
 
