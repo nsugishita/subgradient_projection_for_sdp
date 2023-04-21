@@ -84,6 +84,10 @@ class Config(object):
         """Return a dict containing the configations"""
         return dict(self.__dict__)
 
+    def astuple(self) -> typing.Tuple[typing.Tuple[str, typing.Any], ...]:
+        """Return a tuple"""
+        return tuple(self.__dict__.items())
+
     def non_default(
         self,
     ) -> typing.Iterator[typing.Tuple[str, typing.Any, typing.Any]]:

@@ -10,6 +10,8 @@ import os
 import pickle
 
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 from cpsdppy import config as config_module
 from cpsdppy import sdpa
@@ -48,19 +50,19 @@ def main() -> None:
         "--problem-names",
         type=str,
         nargs="+",
-        default=["theta1"],
+        default=["theta1", "theta2", "theta3"],
     )
     parser.add_argument(
         "--step-sizes",
         type=float,
         nargs="+",
-        default=[100],
+        default=[100, 1000],
     )
     config_module.add_arguments(parser)
     args = parser.parse_args()
 
     base_config = config_module.Config()
-    base_config.time_limit = 60
+    base_config.time_limit = 600
     base_config.parse_args(args)
 
     handler = logging.StreamHandler()
@@ -116,11 +118,25 @@ def main() -> None:
         problem_data = sdpa.read(config)
 
         config.solver = "subgradient_projection"
-        results[config.non_default_as_str()] = run(problem_data, config)
+        results[config.astuple()] = run(problem_data, config)
 
         if setup.lb:
             config.solver = "cutting_plane"
-            results[config.non_default_as_str()] = run(problem_data, config)
+            results[config.astuple()] = run(problem_data, config)
+
+    data = tuple(
+        k + (("walltime", v["walltime"]),) for k, v in results.items()
+    )
+    df = pd.DataFrame.from_records([{k: v for k, v in x} for x in data])
+    dropped = []
+    for column in list(df.columns):
+        if np.unique(df[column]).size == 1:
+            dropped.append(column)
+    df.drop(columns=dropped, inplace=True)
+    df["walltime"] = df["walltime"].astype(float)
+    df["walltime"] = np.round(df["walltime"].values, 2)
+    print(df)
+    raise SystemExit
 
     figs = {}
     axes = {}
@@ -148,7 +164,7 @@ def main() -> None:
 
         config = update_config(base_config, setup)
         config.solver = "subgradient_projection"
-        res = results[config.non_default_as_str()]
+        res = results[config.astuple()]
 
         y = res["iter_lb_gap"][1:] * 100
         x = res["iter_lb_gap_time"][1:]
