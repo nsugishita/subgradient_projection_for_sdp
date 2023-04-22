@@ -381,7 +381,7 @@ class StepSizeManager:
         self.fv = np.r_[self.fv, fv]
         self.gv = np.r_[self.gv, np.max(gv)]
 
-        iter = len(self.gx)
+        iter = len(self.gx) - 1
 
         warmup = 4
         v_x = np.linalg.norm(v - x, ord=2)
