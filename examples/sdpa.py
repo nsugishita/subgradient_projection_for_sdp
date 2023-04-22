@@ -24,7 +24,9 @@ use_cache = True
 
 def run(problem_data, config):
     assert config.solver in ["subgradient_projection", "cutting_plane"]
-    cache_path = f"tmp/sdpa/cache/{config.non_default_as_str()}.pkl"
+    cache_path = (
+        f"tmp/sdpa/cache/{config._asstr(only_modified=True, shorten=True)}.pkl"
+    )
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
     print(cache_path)
     if os.path.exists(cache_path) and use_cache:
@@ -63,7 +65,7 @@ def main() -> None:
 
     base_config = config_module.Config()
     base_config.time_limit = 600
-    base_config.parse_args(args)
+    config_module.parse_args(base_config, args)
 
     handler = logging.StreamHandler()
     logging.getLogger().addHandler(handler)
@@ -88,9 +90,10 @@ def main() -> None:
             "step_size",
             args.step_sizes,
             "cut_type",
-            ["lmi", "linear"],
+            ["linear"],
+            # ["lmi", "linear"],
             "n_cuts",
-            [1, 2, 3, 4],
+            [1, 2, 4, 6, 8],
             "lmi_cuts_from_unique_vectors",
             [0, 1],
             "lb",
@@ -107,7 +110,33 @@ def main() -> None:
             ["lmi", "linear", "naivelinear"].index(setup.cut_type)
         )
 
-    results = dict()
+    results: dict = dict()
+
+    def summary():
+        if len(results) <= 1:
+            return
+        data = tuple(
+            k
+            + (
+                ("walltime", v["walltime"]),
+                ("n_iterations", v["n_iterations"]),
+            )
+            for k, v in results.items()
+        )
+        df = pd.DataFrame.from_records([{k: v for k, v in x} for x in data])
+        dropped = []
+        for column in list(df.columns):
+            if np.unique(df[column]).size == 1:
+                dropped.append(column)
+        df.drop(columns=dropped, inplace=True)
+        for tpls in results.keys():
+            index = [k for k, _ in tpls if k not in dropped]
+            break
+        df = df.set_index(index)
+        df = df.sort_index()
+        df["walltime"] = df["walltime"].astype(float)
+        df["walltime"] = np.round(df["walltime"].values, 2)
+        print(df)
 
     for setup in setups:
         logger.info("- " * 20)
@@ -118,24 +147,14 @@ def main() -> None:
         problem_data = sdpa.read(config)
 
         config.solver = "subgradient_projection"
-        results[config.astuple()] = run(problem_data, config)
+        results[config._astuple(shorten=True)] = run(problem_data, config)
 
         if setup.lb:
             config.solver = "cutting_plane"
-            results[config.astuple()] = run(problem_data, config)
+            results[config._astuple(shorten=True)] = run(problem_data, config)
 
-    data = tuple(
-        k + (("walltime", v["walltime"]),) for k, v in results.items()
-    )
-    df = pd.DataFrame.from_records([{k: v for k, v in x} for x in data])
-    dropped = []
-    for column in list(df.columns):
-        if np.unique(df[column]).size == 1:
-            dropped.append(column)
-    df.drop(columns=dropped, inplace=True)
-    df["walltime"] = df["walltime"].astype(float)
-    df["walltime"] = np.round(df["walltime"].values, 2)
-    print(df)
+        summary()
+
     raise SystemExit
 
     figs = {}
@@ -164,7 +183,7 @@ def main() -> None:
 
         config = update_config(base_config, setup)
         config.solver = "subgradient_projection"
-        res = results[config.astuple()]
+        res = results[config._astuple()]
 
         y = res["iter_lb_gap"][1:] * 100
         x = res["iter_lb_gap_time"][1:]
@@ -193,7 +212,7 @@ def main() -> None:
 
 
 def update_config(base_config, setup):
-    config = base_config.copy()
+    config = config_module.copy(base_config)
     config.problem_name = setup.problem_name
     config.step_size = setup.step_size
     if setup.lb:
