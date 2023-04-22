@@ -103,7 +103,7 @@ class MoreuYoshidaRegularisation:
 
     def solve_posthook(self, model):
         logger.debug(f"{self.__class__.__name__} posthook")
-        if model.is_optimal(suboptimal=True):
+        if model.is_optimal(suboptimal=False):
             return
         self.step_size /= 2
         return True
