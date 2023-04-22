@@ -219,8 +219,6 @@ def run(problem_data, config):
             n_reg_lmi_cuts,
         )
 
-        x = reg.project(v - reg.step_size * objective_coef)
-
         step_size_manager.feed(
             x=x,
             fx=eval_x.f,
@@ -230,6 +228,8 @@ def run(problem_data, config):
             gv=eval_v.g,
         )
         reg.step_size = step_size_manager.step_size
+
+        x = reg.project(v - reg.step_size * objective_coef)
 
         _lb_gap = common.gap(
             best_lb,
