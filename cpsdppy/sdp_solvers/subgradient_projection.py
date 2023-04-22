@@ -246,8 +246,8 @@ def run(problem_data, config):
             # f"  {'ub_gap (%)':>11s}",
             # f"  {'lb':>11s}",
             f"  {'lb_gap (%)':>11s}",
-            f"  {'rcols':>5s}",
-            f"  {'ucols':>5s}",
+            f"  {'rcuts':>5s}",
+            f"  {'ucuts':>5s}",
             f"  {'ss':>7s}",
         ]
         # lb_symbol = " "
