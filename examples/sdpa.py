@@ -17,9 +17,13 @@ from cpsdppy import config as config_module
 from cpsdppy import sdpa
 from cpsdppy.sdp_solvers import cutting_plane, subgradient_projection
 
+# TODO Detect duplicated cuts.
+# TODO Drop old cuts.
+# TODO Add cuts aftr subgradient projection.
+
 logger = logging.getLogger(__name__)
 
-use_cache = True
+use_cache = False
 
 
 def run(problem_data, config):
@@ -52,19 +56,24 @@ def main() -> None:
         "--problem-names",
         type=str,
         nargs="+",
-        default=["theta1", "theta2", "theta3"],
+        # default=["theta1", "theta2", "theta3"],
+        # default=["gpp100"],
+        # default=["gpp124-1"],
+        default=["gpp250-1"],
     )
     parser.add_argument(
         "--step-sizes",
         type=float,
         nargs="+",
-        default=[100, 1000],
+        # default=[100, 1000],
+        default=[1],
     )
     config_module.add_arguments(parser)
     args = parser.parse_args()
 
     base_config = config_module.Config()
     base_config.time_limit = 600
+    base_config.iteration_limit = 100
     config_module.parse_args(base_config, args)
 
     handler = logging.StreamHandler()
