@@ -145,7 +145,7 @@ class LinearCuts:
         logger.debug(f"{self.__class__.__name__} removed {dropped.size} cuts")
 
     def solve_exit_hook(self, model):
-        model.assert_optimal()
+        model.assert_optimal(suboptimal=True)
         slacks = model.get_linear_constraint_slacks()[
             self.linear_constraint_index
         ]
@@ -338,7 +338,7 @@ class LMICuts:
         logger.debug(f"{self.__class__.__name__} removed {dropped.size} cuts")
 
     def solve_exit_hook(self, model):
-        model.assert_optimal()
+        model.assert_optimal(suboptimal=True)
         slacks = np.empty(self.n)
         x = model.get_solution()[: self.n_variables]
         svec = (self.coef @ x).reshape(-1, 3) + self.offset

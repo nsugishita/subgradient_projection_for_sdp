@@ -539,11 +539,16 @@ class GurobiInterface(base.BaseSolverInterface):
     def get_status(self) -> int:
         return self.model.Status
 
-    def is_optimal(self) -> bool:
-        return self.model.Status == 2
+    def is_optimal(self, suboptimal=False) -> bool:
+        status = self.model.Status
+        if status == 2:
+            return True
+        if suboptimal and (status == 13):
+            return True
+        return False
 
-    def assert_optimal(self) -> None:
-        if not self.is_optimal():
+    def assert_optimal(self, *args, **kwargs) -> None:
+        if not self.is_optimal(*args, **kwargs):
             raise ValueError(f"model.status={self.get_status_name()}")
 
     def get_status_name(self) -> str:
