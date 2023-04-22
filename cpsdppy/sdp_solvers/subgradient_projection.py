@@ -139,6 +139,7 @@ def run(problem_data, config):
             ub = min(ub, eval_x.f)
             best_ub = min(ub, best_ub)
 
+        # TODO Add cuts from all the constraints.
         if config.eval_lb_every > 0:
             common.add_cuts(
                 config,
@@ -190,6 +191,33 @@ def run(problem_data, config):
         if np.max(eval_v.g) <= config.feas_tol:
             ub = min(ub, eval_v.f)
             best_ub = min(ub, best_ub)
+
+        # TODO Add cuts from all the constraints.
+        if config.eval_lb_every > 0:
+            common.add_cuts(
+                config,
+                unreg_linear_cuts,
+                unreg_lmi_cuts,
+                constr_svec_coefs[most_violated_constr_index],
+                constr_svec_offset[most_violated_constr_index],
+                x,
+                eval_v.eigenvalues[most_violated_constr_index],
+                eval_v.eigenvectors[most_violated_constr_index],
+                n_unreg_linear_cuts,
+                n_unreg_lmi_cuts,
+            )
+        common.add_cuts(
+            config,
+            reg_linear_cuts,
+            reg_lmi_cuts,
+            constr_svec_coefs[most_violated_constr_index],
+            constr_svec_offset[most_violated_constr_index],
+            x,
+            eval_v.eigenvalues[most_violated_constr_index],
+            eval_v.eigenvectors[most_violated_constr_index],
+            n_reg_linear_cuts,
+            n_reg_lmi_cuts,
+        )
 
         x = reg.project(v - reg.step_size * objective_coef)
 
