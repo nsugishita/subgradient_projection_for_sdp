@@ -18,9 +18,10 @@ class LinearCuts:
     Examples
     --------
     >>> import cpsdppy
+    >>> config = {}
     >>> m = cpsdppy.mip_solvers.gurobi.GurobiInterface()
     >>> _ = m.add_variables(lb=-2, ub=2, obj=[1, 2])
-    >>> linear_cuts = LinearCuts(m)
+    >>> linear_cuts = LinearCuts(m, config)
 
     [ 1 + x     y   ]
     [               ]  >=  0
@@ -63,12 +64,13 @@ class LinearCuts:
     0.0090   -0.3780,  -0.9355
     """
 
-    def __init__(self, model):
+    def __init__(self, model, config):
         """Initialise a LinearCuts instance"""
         self.linear_constraint_index = np.array([], dtype=int)
         self.last_active_iteration = np.array([], dtype=int)
         self.iteration = 0
         self.model = weakref.ref(model)
+        self.config = config
 
         model.add_hooks(self)
 
@@ -158,9 +160,10 @@ class LMICuts:
     Examples
     --------
     >>> import cpsdppy
+    >>> config = {}
     >>> m = cpsdppy.mip_solvers.gurobi.GurobiInterface()
     >>> _ = m.add_variables(lb=-2, ub=2, obj=[1, 2])
-    >>> lmi_cuts = LMICuts(m)
+    >>> lmi_cuts = LMICuts(m, config)
 
     [ 1 + x     y   ]
     [               ]  >=  0
@@ -204,7 +207,7 @@ class LMICuts:
      0.0000   -0.4470,  -0.8946
     """
 
-    def __init__(self, model):
+    def __init__(self, model, config):
         """Initialise a LMICuts instance"""
         self.linear_constraint_index = np.array([], dtype=int).reshape(0, 3)
         self.quadratic_constraint_index = np.array([], dtype=int)
@@ -214,6 +217,7 @@ class LMICuts:
         self.n = 0
         self.n_variables = model.get_n_variables()
         self.model = weakref.ref(model)
+        self.config = config
 
         model.add_hooks(self)
 

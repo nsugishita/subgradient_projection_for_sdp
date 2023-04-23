@@ -57,10 +57,14 @@ def run(problem_data, config):
         regularised_model, config=config
     )
     reg.step_size = config.step_size
-    reg_linear_cuts = mip_solver_extensions.LinearCuts(regularised_model)
-    unreg_linear_cuts = mip_solver_extensions.LinearCuts(unregularised_model)
-    reg_lmi_cuts = mip_solver_extensions.LMICuts(regularised_model)
-    unreg_lmi_cuts = mip_solver_extensions.LMICuts(unregularised_model)
+    reg_linear_cuts = mip_solver_extensions.LinearCuts(
+        regularised_model, config
+    )
+    unreg_linear_cuts = mip_solver_extensions.LinearCuts(
+        unregularised_model, config
+    )
+    reg_lmi_cuts = mip_solver_extensions.LMICuts(regularised_model, config)
+    unreg_lmi_cuts = mip_solver_extensions.LMICuts(unregularised_model, config)
 
     if config.n_linear_cuts_for_regularised_rmp >= 0:
         n_reg_linear_cuts = config.n_linear_cuts_for_regularised_rmp
