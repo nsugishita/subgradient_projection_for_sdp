@@ -26,6 +26,7 @@ setup(
     author="Nagisa Sugishita",
     author_email="s1576972@ed.ac.uk",
     install_requires=[
+        "gurobipy",
         "matplotlib",
         "Mosek",
         "numpy",
