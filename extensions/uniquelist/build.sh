@@ -9,5 +9,5 @@ pushd build
 make
 popd
 
-PYTHONPATH="$PYTHONPATH":"$(pwd)/build" python3 test.py
+python3 test.py
 echo "ok"

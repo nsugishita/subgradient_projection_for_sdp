@@ -65,12 +65,19 @@ PYBIND11_MODULE(uniquelist, m) {
      },
      "Add an item at the end of the list if its' new"
    )
+   .def("erase",
+     [](arraylist &a, py::array_t<int> removed) {
+      auto removed_ = removed.request();
+      return a.erase(removed_.shape[0], static_cast<int*>(removed_.ptr));
+     },
+     "Erase items at given indexes"
+   )
    .def("erase_nonzero",
      [](arraylist &a, py::array_t<int> removed) {
       auto removed_ = removed.request();
       return a.erase_nonzero(removed_.shape[0], static_cast<int*>(removed_.ptr));
      },
-     "Erase items at given positions"
+     "Erase items at positions where flags are nonzeros"
    )
    ;
 }
