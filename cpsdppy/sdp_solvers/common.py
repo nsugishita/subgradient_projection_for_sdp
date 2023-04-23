@@ -314,10 +314,13 @@ def add_cuts(
         lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
 
     for i in range(n_linear_cuts):
-        if config.lmi_cuts_from_unique_vectors:
-            v0 = v[:, i + 2 * n_lmi_cuts]
+        if n_lmi_cuts == 0:
+            v0 = v[:, i]
         else:
-            v0 = v[:, i + n_lmi_cuts + 1]
+            if config.lmi_cuts_from_unique_vectors:
+                v0 = v[:, i + 2 * n_lmi_cuts]
+            else:
+                v0 = v[:, i + n_lmi_cuts + 1]
         v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
         cut_coef = v0v0t @ constr_svec_coef
         cut_offset = v0v0t @ constr_svec_offset

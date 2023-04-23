@@ -180,12 +180,8 @@ def run(problem_data, config):
         np.testing.assert_equal(subgrad.ndim, 1)
         relaxation_parameter = 1.0
         if funcval > 0:
-            v = (
-                x
-                - relaxation_parameter
-                * funcval
-                * subgrad
-                / np.linalg.norm(subgrad) ** 2
+            v = x - relaxation_parameter * funcval * subgrad / (
+                np.linalg.norm(subgrad) ** 2
             )
             v = reg.project(v)
         else:
