@@ -80,9 +80,16 @@ class LMICuts:
 
         model.add_hooks(self)
 
-        self.coef = scipy.sparse.csr_matrix(
-            ([], ([], [])), shape=(0, model.get_n_variables())
-        )
+        self.sparse_coef = False
+
+        if self.sparse_coef:
+            self.coef = scipy.sparse.csr_matrix(
+                ([], ([], [])), shape=(0, model.get_n_variables())
+            )
+        else:
+            self.coef = np.array([], dtype=float).reshape(
+                0, model.get_n_variables()
+            )
         self.offset = np.array([]).reshape(0, 3)
 
     def add_lmi_cuts(self, coef, offset):
@@ -100,13 +107,23 @@ class LMICuts:
                 coef = np.stack(coef)
         elif isinstance(coef, scipy.sparse.spmatrix):
             coef = [coef]
-        # coef is a numpy array or a list of sparse matrices
-        if isinstance(coef, np.ndarray):
-            coef = coef.reshape(-1, self.n_variables)
-            coef = scipy.sparse.csr_array(coef)
+
+        if self.sparse_coef:
+            if isinstance(coef, np.ndarray):
+                coef = coef.reshape(-1, self.n_variables)
+                coef = scipy.sparse.csr_array(coef)
+            else:
+                coef = scipy.sparse.vstack(coef)
+            sparse_coef = coef
         else:
-            coef = scipy.sparse.vstack(coef)
-        # coef is a sparse matrix of shape (3 * n_new_cuts, n_variables)
+            # coef is a numpy array or a list of sparse matrices
+            if not isinstance(coef, np.ndarray):
+                coef = scipy.sparse.vstack(coef).toarray()
+            if isinstance(coef, np.ndarray):
+                coef = coef.reshape(-1, self.n_variables)
+            sparse_coef = scipy.sparse.coo_array(coef)
+
+        # coef is a sparse/numpy array of shape (3 * n_new_cuts, n_variables)
         n_new_cuts = coef.shape[0] // 3
         offset = offset.reshape(n_new_cuts, 3)
         np.testing.assert_equal(coef.shape, (3 * n_new_cuts, self.n_variables))
@@ -121,7 +138,7 @@ class LMICuts:
             new_quadratic_constraint_index,
         ) = model.add_2x2_psd_variables(n_new_cuts)
         D = -scipy.sparse.eye(3 * n_new_cuts)
-        constr_coef = scipy.sparse.hstack([coef, Z, D])
+        constr_coef = scipy.sparse.hstack([sparse_coef, Z, D])
         new_linear_constraint_index = model.add_linear_constraints(
             shape=3 * n_new_cuts,
             coef=constr_coef,
@@ -132,7 +149,10 @@ class LMICuts:
             n_new_cuts, 3
         )
 
-        self.coef = scipy.sparse.vstack([self.coef, coef]).tocsr()
+        if self.sparse_coef:
+            self.coef = scipy.sparse.vstack([self.coef, coef]).tocsr()
+        else:
+            self.coef = np.concatenate([self.coef, coef], axis=0)
 
         self.offset = np.concatenate([self.offset, offset], axis=0)
 
