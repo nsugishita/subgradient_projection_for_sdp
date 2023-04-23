@@ -82,7 +82,9 @@ class LinearCuts:
         self.offset = np.array([], dtype=float)
 
         if self.config.duplicate_cut_check:
-            self.cut_coef = uniquelist.UniqueArrayList(model.get_n_variables())
+            self.cut_coef_unique_list = uniquelist.UniqueArrayList(
+                model.get_n_variables()
+            )
 
     @property
     def n(self):
@@ -102,7 +104,9 @@ class LinearCuts:
             if isinstance(coef, scipy.sparse.spmatrix):
                 coef = coef.toarray()
             coef = np.atleast_2d(coef)
-            pos_new = np.array([self.cut_coef.push_back(x) for x in coef])
+            pos_new = np.array(
+                [self.cut_coef_unique_list.push_back(x) for x in coef]
+            )
             pos = np.array([x[0] for x in pos_new])
             new = np.array([x[1] for x in pos_new]).astype(bool)
             self.added_iteration[pos[~new]] = self.iteration
@@ -153,8 +157,18 @@ class LinearCuts:
         indexremove.remove(self.linear_constraint_index.ravel(), index.ravel())
 
     def solve_enter_hook(self, model):
-        memory = 1000
-        buf = self.last_active_iteration <= self.iteration - memory
+        memory = self.config.memory
+        if memory < 0:
+            memory = np.inf
+        if self.config.cut_deletion_criterion == "activity":
+            cut_iteration = self.last_active_iteration
+        elif self.config.cut_deletion_criterion == "creation":
+            cut_iteration = self.added_iteration
+        else:
+            raise ValueError(
+                f"unknown criterion {self.config.cut_deletion_criterion}"
+            )
+        buf = cut_iteration <= self.iteration - memory
         dropped = np.nonzero(buf)[0]
         kept = np.nonzero(~buf)[0]
         if dropped.size > 0:
@@ -164,6 +178,7 @@ class LinearCuts:
             self.linear_constraint_index = self.linear_constraint_index[kept]
             self.added_iteration = self.added_iteration[kept]
             self.last_active_iteration = self.last_active_iteration[kept]
+            self.cut_coef_unique_list.erase(dropped)
             self.coef = self.coef[kept]
             self.offset = self.offset[kept]
         logger.debug(f"{self.__class__.__name__} removed {dropped.size} cuts")
@@ -347,8 +362,18 @@ class LMICuts:
         )
 
     def solve_enter_hook(self, model):
-        memory = 10000
-        buf = self.last_active_iteration <= self.iteration - memory
+        memory = self.config.memory
+        if memory < 0:
+            memory = np.inf
+        if self.config.cut_deletion_criterion == "activity":
+            cut_iteration = self.last_active_iteration
+        elif self.config.cut_deletion_criterion == "creation":
+            cut_iteration = self.added_iteration
+        else:
+            raise ValueError(
+                f"unknown criterion {self.config.cut_deletion_criterion}"
+            )
+        buf = cut_iteration <= self.iteration - memory
         dropped = np.nonzero(buf)[0]
         kept = np.nonzero(~buf)[0]
         if dropped.size > 0:
@@ -365,6 +390,8 @@ class LMICuts:
             ]
             self.variable_index = self.variable_index[kept]
             self.last_active_iteration = self.last_active_iteration[kept]
+            # TODO When cut_coef_unique_list is implemented, drop values here.
+            # self.cut_coef_unique_list.erase(dropped)
             self.coef = self.coef[np.repeat(kept, 3)]
             self.offset = self.offset[kept]
             self.n -= dropped.size

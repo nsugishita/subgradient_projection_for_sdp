@@ -17,9 +17,6 @@ from cpsdppy import config as config_module
 from cpsdppy import sdpa
 from cpsdppy.sdp_solvers import cutting_plane, subgradient_projection
 
-# TODO Drop old cuts.
-# TODO Add cuts aftr subgradient projection.
-
 logger = logging.getLogger(__name__)
 
 use_cache = False
@@ -73,6 +70,7 @@ def main() -> None:
     base_config = config_module.Config()
     base_config.time_limit = 600
     base_config.iteration_limit = 100
+    base_config.memory = 5
     config_module.parse_args(base_config, args)
 
     handler = logging.StreamHandler()

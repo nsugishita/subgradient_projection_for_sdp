@@ -102,6 +102,7 @@ def run(problem_data, config):
     best_ub = np.inf
 
     x = np.zeros(n_variables)
+    x = reg.project(x)
 
     solver_status = "unknown"
 
@@ -186,9 +187,9 @@ def run(problem_data, config):
                 * subgrad
                 / np.linalg.norm(subgrad) ** 2
             )
+            v = reg.project(v)
         else:
             v = x
-        v = reg.project(v)
 
         # Compute the objetive value and constraint violation of v.
         eval_v = common.evaluate_solution(v, problem_data)
