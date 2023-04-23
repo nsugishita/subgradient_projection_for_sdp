@@ -8,8 +8,13 @@ import weakref
 import indexremove
 import numpy as np
 import scipy.sparse
+import uniquelist
 
 logger = logging.getLogger(__name__)
+
+# TODO Improve dupliate cut check in LMICuts
+# Currently we naively compare the coef. But in LMICuts
+# different coefficient may result in the same constraint.
 
 
 class LMICuts:
@@ -82,15 +87,21 @@ class LMICuts:
 
         self.sparse_coef = False
 
+        if self.config.duplicate_cut_check:
+            self.sparse_coef = False
+            self.cut_coef_unique_list = uniquelist.UniqueArrayList(
+                model.get_n_variables()
+            )
+
         if self.sparse_coef:
-            self.coef = scipy.sparse.csr_matrix(
+            self.cut_coef = scipy.sparse.csr_matrix(
                 ([], ([], [])), shape=(0, model.get_n_variables())
             )
         else:
-            self.coef = np.array([], dtype=float).reshape(
+            self.cut_coef = np.array([], dtype=float).reshape(
                 0, model.get_n_variables()
             )
-        self.offset = np.array([]).reshape(0, 3)
+        self.cut_offset = np.array([]).reshape(0, 3)
 
     def add_lmi_cuts(self, coef, offset):
         """Add LMI cuts
@@ -123,6 +134,19 @@ class LMICuts:
                 coef = coef.reshape(-1, self.n_variables)
             sparse_coef = scipy.sparse.coo_array(coef)
 
+        if self.config.duplicate_cut_check:
+            coef = coef.reshape(-1, 3 * self.n_variables)
+            pos_new = np.array(
+                [self.cut_coef_unique_list.push_back(x) for x in coef]
+            )
+            pos = np.array([x[0] for x in pos_new])
+            new = np.array([x[1] for x in pos_new]).astype(bool)
+            self.added_iteration[pos[~new]] = self.iteration
+            if np.all(~new):
+                return
+            coef = coef[new]
+            coef = coef.reshape(-1, self.n_variables)
+
         # coef is a sparse/numpy array of shape (3 * n_new_cuts, n_variables)
         n_new_cuts = coef.shape[0] // 3
         offset = offset.reshape(n_new_cuts, 3)
@@ -150,11 +174,11 @@ class LMICuts:
         )
 
         if self.sparse_coef:
-            self.coef = scipy.sparse.vstack([self.coef, coef]).tocsr()
+            self.cut_coef = scipy.sparse.vstack([self.cut_coef, coef]).tocsr()
         else:
-            self.coef = np.concatenate([self.coef, coef], axis=0)
+            self.cut_coef = np.concatenate([self.cut_coef, coef], axis=0)
 
-        self.offset = np.concatenate([self.offset, offset], axis=0)
+        self.cut_offset = np.concatenate([self.cut_offset, offset], axis=0)
 
         self.variable_index = np.concatenate(
             [
@@ -231,10 +255,9 @@ class LMICuts:
             ]
             self.variable_index = self.variable_index[kept]
             self.last_active_iteration = self.last_active_iteration[kept]
-            # TODO When cut_coef_unique_list is implemented, drop values here.
-            # self.cut_coef_unique_list.erase(dropped)
-            self.coef = self.coef[np.repeat(kept, 3)]
-            self.offset = self.offset[kept]
+            self.cut_coef_unique_list.erase(dropped)
+            self.cut_coef = self.cut_coef[np.repeat(kept, 3)]
+            self.cut_offset = self.cut_offset[kept]
             self.n -= dropped.size
         logger.debug(f"{self.__class__.__name__} removed {dropped.size} cuts")
 
@@ -242,7 +265,7 @@ class LMICuts:
         model.assert_optimal(suboptimal=True)
         slacks = np.empty(self.n)
         x = model.get_solution()[: self.n_variables]
-        svec = (self.coef @ x).reshape(-1, 3) + self.offset
+        svec = (self.cut_coef @ x).reshape(-1, 3) + self.cut_offset
         matrix = np.empty((2, 2))
         for i, (a, b, c) in enumerate(svec):
             matrix[0, 0] = a
