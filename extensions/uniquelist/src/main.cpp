@@ -5,29 +5,34 @@
 
 namespace py = pybind11;
 
-using cls = uniquelist::unique_list<int>;
+using intlist = uniquelist::unique_list<int>;
+using arraylist = uniquelist::unique_array_list<double, uniquelist::strictly_less>;
+using arraylistparent = uniquelist::unique_list<
+  std::pair<size_t, std::shared_ptr<const double[]>>,
+  uniquelist::array_less<uniquelist::strictly_less>
+>;
 
 // TODO Make UniqueList pickable.
 
 PYBIND11_MODULE(uniquelist, m) {
     m.doc() = "uniquelist extension";
 
-    py::class_<cls>(m, "UniqueList")
+   py::class_<intlist>(m, "UniqueList")
    .def(py::init<>())
-   .def("size", &cls::size, "Return the number of items in the list")
+   .def("size", &intlist::size, "Return the number of items in the list")
    .def("push_back",
-     py::overload_cast<const int&>(&cls::push_back),
+     py::overload_cast<const int&>(&intlist::push_back),
      "Add an item at the end of the list if its' new"
     )
    .def("erase_nonzero",
-     [](cls &a, py::array_t<int> removed) {
+     [](intlist &a, py::array_t<int> removed) {
       auto removed_ = removed.request();
       return a.erase_nonzero(removed_.shape[0], static_cast<int*>(removed_.ptr));
      },
      "Erase items at given positions"
    )
    .def("index",
-     [](const cls &a, int x) {
+     [](const intlist &a, int x) {
        int i = 0;
        for (auto item : a) {
          if (item == x) {
@@ -40,13 +45,35 @@ PYBIND11_MODULE(uniquelist, m) {
      "Search a give item in the list and return its index"
    )
    .def("display",
-     [](const cls &a) {
+     [](const intlist &a) {
        for (auto item : a) {
          std::cout << item << " ";
        }
        std::cout << std::endl;
      },
      "Print the items"
+   )
+   ;
+
+   py::class_<arraylistparent>(m, "_UniqueArrayListParent");
+
+   py::class_<arraylist, arraylistparent>(m, "UniqueArrayList")
+   .def(py::init<int>())
+   .def("size", &arraylist::size, "Return the number of items in the list")
+   .def("push_back",
+     [](arraylist &a, py::array_t<double> array) {
+      auto array_ = array.request();
+      // return a.push_back(array_.shape[0], static_cast<int*>(array_.ptr));
+      return a.push_back(static_cast<double*>(array_.ptr));
+     },
+     "Add an item at the end of the list if its' new"
+   )
+   .def("erase_nonzero",
+     [](arraylist &a, py::array_t<int> removed) {
+      auto removed_ = removed.request();
+      return a.erase_nonzero(removed_.shape[0], static_cast<int*>(removed_.ptr));
+     },
+     "Erase items at given positions"
    )
    ;
 }
