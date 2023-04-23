@@ -100,15 +100,15 @@ def main():
     handler = logging.StreamHandler()
     logging.getLogger().addHandler(handler)
     logging.getLogger().setLevel(logging.INFO)
+    config = cpsdppy.config.Config()
 
     problem_names = "abcd"
-    problem_names = "cd"
     for problem_name in problem_names:
         print(f"{problem_name=}  {'linear_cuts'}")
         problem_data = get_problem_data(problem_name)
-        sdp_linear_cuts(**problem_data)
+        sdp_linear_cuts(**problem_data, config=config)
         print(f"{problem_name=}  {'lmi_cuts'}")
-        sdp_lmi_cuts(**problem_data)
+        sdp_lmi_cuts(**problem_data, config=config)
 
 
 def get_problem_data(problem_name):
@@ -240,9 +240,11 @@ def get_problem_data(problem_name):
     }
 
 
-def sdp_linear_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
+def sdp_linear_cuts(
+    problem_name, objective_coef, constr_coefs, constr_offset, config
+):
     result = _sdp_linear_cuts_solver(
-        objective_coef, constr_coefs, constr_offset
+        objective_coef, constr_coefs, constr_offset, config
     )
     x_list = result["x_list"]
     linear_cuts = result["linear_cuts"]
@@ -301,8 +303,12 @@ def sdp_linear_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
     print(figpath)
 
 
-def sdp_lmi_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
-    result = _sdp_lmi_cuts_solver(objective_coef, constr_coefs, constr_offset)
+def sdp_lmi_cuts(
+    problem_name, objective_coef, constr_coefs, constr_offset, config
+):
+    result = _sdp_lmi_cuts_solver(
+        objective_coef, constr_coefs, constr_offset, config
+    )
     x_list = result["x_list"]
     lmi_cuts = result["lmi_cuts"]
     constr_svec_coefs = result["constr_svec_coefs"]
@@ -325,8 +331,8 @@ def sdp_lmi_cuts(problem_name, objective_coef, constr_coefs, constr_offset):
         ax.plot(x[0], x[1], "o", markersize=4, color=iterate_color)
 
     for i in range(lmi_cuts.n):
-        _C = lmi_cuts.coef[3 * i : 3 * i + 3]
-        _offset = lmi_cuts.offset[i]
+        _C = lmi_cuts.cut_coef[3 * i : 3 * i + 3]
+        _offset = lmi_cuts.cut_offset[i]
         det = []
         for _y in py:
             for _x in px:
@@ -380,7 +386,9 @@ def plot_lmi_cut_area(ax, px, py, matrix, color):
     )
 
 
-def _sdp_linear_cuts_solver(objective_coef, constr_coefs, constr_offset):
+def _sdp_linear_cuts_solver(
+    objective_coef, constr_coefs, constr_offset, config
+):
     constr_svec_coefs = np.stack(
         [cpsdppy.linalg.svec(x) for x in constr_coefs], axis=1
     )
@@ -390,11 +398,12 @@ def _sdp_linear_cuts_solver(objective_coef, constr_coefs, constr_offset):
 
     model.add_variables(lb=-2, ub=2, obj=objective_coef)
 
-    linear_cuts = cpsdppy.mip_solver_extensions.LinearCuts(model)
+    linear_cuts = cpsdppy.mip_solver_extensions.LinearCuts(model, config)
 
+    n_iterations = 5
     x_list = []
 
-    for iteration in range(5):
+    for iteration in range(n_iterations):
         linear_cuts.iteration = iteration
         model.solve()
         x = model.get_solution()
@@ -436,7 +445,7 @@ def _sdp_linear_cuts_solver(objective_coef, constr_coefs, constr_offset):
     }
 
 
-def _sdp_lmi_cuts_solver(objective_coef, constr_coefs, constr_offset):
+def _sdp_lmi_cuts_solver(objective_coef, constr_coefs, constr_offset, config):
     constr_svec_coefs = np.stack(
         [cpsdppy.linalg.svec(x) for x in constr_coefs], axis=1
     )
@@ -446,7 +455,7 @@ def _sdp_lmi_cuts_solver(objective_coef, constr_coefs, constr_offset):
 
     model.add_variables(lb=-2, ub=2, obj=objective_coef)
 
-    lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(model)
+    lmi_cuts = cpsdppy.mip_solver_extensions.LMICuts(model, config)
 
     n_iterations = 4
     x_list = []
