@@ -43,6 +43,8 @@ class Config(config_utils.BaseConfig):
         # Method to solve RMP model
         self.rmp_solver_method: str = "dual_simplex"
 
+        self.duplicate_cut_check: int = 1
+
         # Type of initial cuts. {'lmi', 'linear', 'none'}
         self.initial_cut_type: str = "lmi"
 

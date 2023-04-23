@@ -17,7 +17,6 @@ from cpsdppy import config as config_module
 from cpsdppy import sdpa
 from cpsdppy.sdp_solvers import cutting_plane, subgradient_projection
 
-# TODO Detect duplicated cuts.
 # TODO Drop old cuts.
 # TODO Add cuts aftr subgradient projection.
 

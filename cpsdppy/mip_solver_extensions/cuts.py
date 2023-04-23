@@ -8,6 +8,7 @@ import weakref
 import indexremove
 import numpy as np
 import scipy.sparse
+import uniquelist
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class LinearCuts:
     Examples
     --------
     >>> import cpsdppy
-    >>> config = {}
+    >>> config = cpsdppy.config.Config()
     >>> m = cpsdppy.mip_solvers.gurobi.GurobiInterface()
     >>> _ = m.add_variables(lb=-2, ub=2, obj=[1, 2])
     >>> linear_cuts = LinearCuts(m, config)
@@ -67,6 +68,7 @@ class LinearCuts:
     def __init__(self, model, config):
         """Initialise a LinearCuts instance"""
         self.linear_constraint_index = np.array([], dtype=int)
+        self.added_iteration = np.array([], dtype=int)
         self.last_active_iteration = np.array([], dtype=int)
         self.iteration = 0
         self.model = weakref.ref(model)
@@ -78,6 +80,9 @@ class LinearCuts:
             0, model.get_n_variables()
         )
         self.offset = np.array([], dtype=float)
+
+        if self.config.duplicate_cut_check:
+            self.cut_coef = uniquelist.UniqueArrayList(model.get_n_variables())
 
     @property
     def n(self):
@@ -92,6 +97,19 @@ class LinearCuts:
         ```
         """
         model = self.model()
+
+        if self.config.duplicate_cut_check:
+            if isinstance(coef, scipy.sparse.spmatrix):
+                coef = coef.toarray()
+            coef = np.atleast_2d(coef)
+            pos_new = np.array([self.cut_coef.push_back(x) for x in coef])
+            pos = np.array([x[0] for x in pos_new])
+            new = np.array([x[1] for x in pos_new]).astype(bool)
+            self.added_iteration[pos[~new]] = self.iteration
+            if np.all(~new):
+                return
+            coef = coef[new]
+
         if isinstance(coef, scipy.sparse.spmatrix):
             n_new_cuts = coef.shape[0]
             new_constraint_index = model.add_linear_constraints(
@@ -123,6 +141,9 @@ class LinearCuts:
                 new_constraint_index,
             ]
         )
+        self.added_iteration = np.concatenate(
+            [self.added_iteration, np.full(n_new_cuts, self.iteration)]
+        )
         self.last_active_iteration = np.concatenate(
             [self.last_active_iteration, np.full(n_new_cuts, self.iteration)]
         )
@@ -141,6 +162,7 @@ class LinearCuts:
                 self.linear_constraint_index[dropped]
             )
             self.linear_constraint_index = self.linear_constraint_index[kept]
+            self.added_iteration = self.added_iteration[kept]
             self.last_active_iteration = self.last_active_iteration[kept]
             self.coef = self.coef[kept]
             self.offset = self.offset[kept]
@@ -160,7 +182,7 @@ class LMICuts:
     Examples
     --------
     >>> import cpsdppy
-    >>> config = {}
+    >>> config = cpsdppy.config.Config()
     >>> m = cpsdppy.mip_solvers.gurobi.GurobiInterface()
     >>> _ = m.add_variables(lb=-2, ub=2, obj=[1, 2])
     >>> lmi_cuts = LMICuts(m, config)
@@ -212,6 +234,7 @@ class LMICuts:
         self.linear_constraint_index = np.array([], dtype=int).reshape(0, 3)
         self.quadratic_constraint_index = np.array([], dtype=int)
         self.variable_index = np.array([], dtype=int).reshape(0, 3)
+        self.added_iteration = np.array([], dtype=int)
         self.last_active_iteration = np.array([], dtype=int)
         self.iteration = 0
         self.n = 0
@@ -298,6 +321,12 @@ class LMICuts:
             ]
         )
 
+        self.added_iteration = np.concatenate(
+            [
+                self.added_iteration,
+                np.full(n_new_cuts, self.iteration),
+            ]
+        )
         self.last_active_iteration = np.concatenate(
             [
                 self.last_active_iteration,
