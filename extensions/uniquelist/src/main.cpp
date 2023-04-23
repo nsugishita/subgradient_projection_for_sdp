@@ -17,10 +17,16 @@ PYBIND11_MODULE(uniquelist, m) {
    py::class_<intlist>(m, "UniqueList")
    .def(py::init<>())
    .def("size", &intlist::size, "Return the number of items in the list")
+   // .def("push_back",
+   //   py::overload_cast<const int&>(&intlist::push_back),
+   //   "Add an item at the end of the list if its' new"
+   //  )
    .def("push_back",
-     py::overload_cast<const int&>(&intlist::push_back),
-     "Add an item at the end of the list if its' new"
-    )
+     [](intlist &a, int x) {
+       return a.push_back(x);
+     },
+     "Add an item at the end of the list if it's new"
+   )
    .def("erase_nonzero",
      [](intlist &a, py::array_t<int> removed) {
       auto removed_ = removed.request();
