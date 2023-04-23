@@ -549,40 +549,37 @@ template <typename Compare> struct array_less {
 };
 
 template <typename T, typename Compare>
-using unique_list2_ =
+using unique_array_list_super_class =
     unique_list<std::pair<size_t, std::shared_ptr<const T[]>>,
                 array_less<Compare>>;
 
 template <typename T, typename Compare = std::less<T>>
 struct unique_array_list
-    : unique_list<std::pair<size_t, std::shared_ptr<const T[]>>,
-                  array_less<Compare>> {
+    : unique_array_list_super_class<T, Compare> {
   using unique_list_ =
       unique_list<std::pair<size_t, std::shared_ptr<const T[]>>,
                   array_less<Compare>>;
 
   size_t array_size;
 
-  unique_array_list(size_t array_size) : unique_list2_<T, Compare>{}, array_size{array_size} {}
+  unique_array_list(size_t array_size) : unique_array_list_super_class<T, Compare>{}, array_size{array_size} {}
 
   auto push_back(const T *key) {
     std::shared_ptr<const T[]> key_view = shared_ptr_without_ownership(key);
     auto copy_ = [] (const std::pair<size_t, std::shared_ptr<const T[]>> &a) { return deepcopy<size_t, const T>(a);};
-    return unique_list2_<T, Compare>::push_back_with_hook({this->array_size, key_view},
+    return unique_array_list_super_class<T, Compare>::push_back_with_hook({this->array_size, key_view},
                                              copy_);
-    // return unique_list2_<T, Compare>::push_back_with_hook({this->array_size, key_view},
-    //                                          deepcopy<size_t, const T>);
   }
 
-  auto insert(typename unique_list2_<T, Compare>::iterator position, const T *key) {
+  auto insert(typename unique_array_list_super_class<T, Compare>::iterator position, const T *key) {
     std::shared_ptr<const T[]> key_view = shared_ptr_without_ownership(key);
-    return unique_list2_<T, Compare>::insert_with_hook(position, {this->array_size, key_view},
+    return unique_array_list_super_class<T, Compare>::insert_with_hook(position, {this->array_size, key_view},
                                           deepcopy<size_t, const T>);
   }
 
   auto isin(const T *key) const noexcept {
     std::shared_ptr<const T[]> key_view = shared_ptr_without_ownership(key);
-    return unique_list2_<T, Compare>::isin({this->array_size, key_view});
+    return unique_array_list_super_class<T, Compare>::isin({this->array_size, key_view});
   }
 };
 

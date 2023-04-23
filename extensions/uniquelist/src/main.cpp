@@ -7,10 +7,7 @@ namespace py = pybind11;
 
 using intlist = uniquelist::unique_list<int>;
 using arraylist = uniquelist::unique_array_list<double, uniquelist::strictly_less>;
-using arraylistparent = uniquelist::unique_list<
-  std::pair<size_t, std::shared_ptr<const double[]>>,
-  uniquelist::array_less<uniquelist::strictly_less>
->;
+using arraylistparent = uniquelist::unique_array_list_super_class<double, uniquelist::strictly_less>;
 
 // TODO Make UniqueList pickable.
 
