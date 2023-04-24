@@ -255,7 +255,8 @@ class LMICuts:
             ]
             self.variable_index = self.variable_index[kept]
             self.last_active_iteration = self.last_active_iteration[kept]
-            self.cut_coef_unique_list.erase(dropped)
+            if self.config.duplicate_cut_check:
+                self.cut_coef_unique_list.erase(dropped)
             self.cut_coef = self.cut_coef[np.repeat(kept, 3)]
             self.cut_offset = self.cut_offset[kept]
             self.n -= dropped.size

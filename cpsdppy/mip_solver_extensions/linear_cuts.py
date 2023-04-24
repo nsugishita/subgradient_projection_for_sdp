@@ -178,7 +178,8 @@ class LinearCuts:
             self.linear_constraint_index = self.linear_constraint_index[kept]
             self.added_iteration = self.added_iteration[kept]
             self.last_active_iteration = self.last_active_iteration[kept]
-            self.cut_coef_unique_list.erase(dropped)
+            if self.config.duplicate_cut_check:
+                self.cut_coef_unique_list.erase(dropped)
             self.coef = self.coef[kept]
             self.offset = self.offset[kept]
         logger.debug(f"{self.__class__.__name__} removed {dropped.size} cuts")
