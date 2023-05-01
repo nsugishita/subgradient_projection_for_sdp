@@ -33,6 +33,7 @@ setup(
         "pandas",
         "pyyaml",
         "scipy",
+        "torch",
         "Jinja2",
         # For development
         "black",
