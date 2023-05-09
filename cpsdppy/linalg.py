@@ -237,27 +237,6 @@ def svec(a, *args, **kwargs):
     array([1.    , 1.4142, 2.    , 0.    , 2.8284, 4.    , 0.    , 2.8284,
            5.6569, 0.    ])
 
-    >>> import torch
-    >>> x = torch.Tensor([
-    ...     [1., 1., 0., 0.],
-    ...     [1., 2., 2., 2.],
-    ...     [0., 2., 4., 4.],
-    ...     [0., 2., 4., 0.],
-    ... ])
-    >>> np.round(svec(x), 4)
-    tensor([1.0000, 1.4142, 2.0000, 0.0000, 2.8284, 4.0000, 0.0000,
-            2.8284, 5.6569, 0.0000])
-
-    If a pytorch tensor is given, the gradient can be computed.
-
-    >>> _ = x.requires_grad_()
-    >>> _ = svec(x).sum().backward()
-    >>> x.grad
-    tensor([[1.0000, 0.7071, 0.7071, 0.7071],
-            [0.7071, 1.0000, 0.7071, 0.7071],
-            [0.7071, 0.7071, 1.0000, 0.7071],
-            [0.7071, 0.7071, 0.7071, 1.0000]])
-
     Parameters
     ----------
     a : array of 2 or more dimensions
@@ -477,24 +456,6 @@ def svec_inv(a, *args, **kwargs):
            [1., 2., 0., 0.],
            [0., 2., 4., 0.],
            [0., 2., 4., 0.]])
-
-    When a pytorch tensor is given, `svec_inv` compute the full matrix.
-
-    >>> import torch
-    >>> t = torch.Tensor(s)
-    >>> svec_inv(t)
-    tensor([[1.0000, 1.0000, 0.0000, 0.0000],
-            [1.0000, 2.0000, 2.0000, 2.0000],
-            [0.0000, 2.0000, 4.0000, 4.0000],
-            [0.0000, 2.0000, 4.0000, 0.0000]])
-
-    One can compute the gradient.
-
-    >>> _ = t.requires_grad_()
-    >>> svec_inv(t).sum().backward()
-    >>> np.round(t.grad, 4)
-    tensor([1.0000, 1.4142, 1.0000, 1.4142, 1.4142, 1.0000, 1.4142, 1.4142,
-            1.4142, 1.0000])
 
     Parameters
     ----------

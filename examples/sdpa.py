@@ -55,7 +55,9 @@ def main() -> None:
         # default=["theta1", "theta2", "theta3"],
         # default=["gpp100"],
         # default=["gpp124-1"],
-        default=["gpp250-1"],
+        # default=["gpp250-1"],
+        default=["gpp500-1"],
+        # default=["mcp250-1"],
     )
     parser.add_argument(
         "--step-sizes",
@@ -99,7 +101,8 @@ def main() -> None:
             ["linear"],
             # ["lmi", "linear"],
             "n_cuts",
-            [1, 2, 4, 6, 8],
+            # [1, 2, 4, 6, 8],
+            [1],
             "lmi_cuts_from_unique_vectors",
             [0, 1],
             "lb",
