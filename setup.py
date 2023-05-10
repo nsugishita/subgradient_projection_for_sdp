@@ -34,10 +34,6 @@ setup(
         "pyyaml",
         "scipy",
         "Jinja2",
-        # For development
-        "black",
-        "pre-commit",
-        "mypy",
     ],
     license=license,
     packages=[package_name],
