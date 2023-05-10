@@ -25,12 +25,13 @@ class MoreuYoshidaRegularisation:
     ... Bounds
     ... End
     ... '''
-    >>> m = cpsdppy.mip_solvers.gurobi.GurobiInterface.read_string(text)
+    >>> Solver = cpsdppy.mip_solvers.gurobi_interface.GurobiInterface
+    >>> m = Solver.read_string(text)
     >>> m.solve()
     >>> m.get_solution()
     array([0.5, 1. , 0. ])
 
-    >>> m = cpsdppy.mip_solvers.gurobi.GurobiInterface.read_string(text)
+    >>> m = Solver.read_string(text)
     >>> reg = MoreuYoshidaRegularisation(m)
     >>> x = np.array([0.5, 0.5, 0.5])
     >>> for i in range(8):

@@ -40,7 +40,9 @@ def run(problem_data, config):
         unregularised_rmp_n_lmi_cuts=dict(default=-1, timing=False),
     )
 
-    unregularised_model = mip_solvers.gurobi.GurobiInterface()
+    unregularised_model = mip_solvers.get_solver_interface(
+        config.solver_interface
+    )
     xlb = problem_data["variable_lb"]
     xub = problem_data["variable_ub"]
     objective_coef = problem_data["objective_coefficient"]

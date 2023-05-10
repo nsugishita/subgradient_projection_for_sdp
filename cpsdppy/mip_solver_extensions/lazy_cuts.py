@@ -13,7 +13,7 @@ class LazyConstraints:
     r"""Lazy constraints
 
     >>> import cpsdppy
-    >>> m = cpsdppy.mip_solvers.gurobi.GurobiInterface()
+    >>> m = cpsdppy.mip_solvers.gurobi_interface.GurobiInterface()
     >>> _ = m.add_variables(shape=2, obj=[1, 2])
     >>> text = '''
     ... 2 x1 + 2 x2 >= 1

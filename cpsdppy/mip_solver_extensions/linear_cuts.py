@@ -20,7 +20,7 @@ class LinearCuts:
     --------
     >>> import cpsdppy
     >>> config = cpsdppy.config.Config()
-    >>> m = cpsdppy.mip_solvers.gurobi.GurobiInterface()
+    >>> m = cpsdppy.mip_solvers.gurobi_interface.GurobiInterface()
     >>> _ = m.add_variables(lb=-2, ub=2, obj=[1, 2])
     >>> linear_cuts = LinearCuts(m, config)
 
