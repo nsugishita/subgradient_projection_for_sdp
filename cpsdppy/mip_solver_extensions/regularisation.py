@@ -106,6 +106,7 @@ class MoreuYoshidaRegularisation:
                 c_x @ vars + sign * ss_inv * (vars - centre) @ (vars - centre)
             )
         elif "cplex" in solver_name:
+            ss_inv *= 2
             # This function makes the problem type to QP even if
             # the coefficient is 0. Maybe we want to avoid calling it if not
             # necessary?
