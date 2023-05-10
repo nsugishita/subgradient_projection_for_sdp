@@ -604,7 +604,17 @@ class CplexInterface(base.BaseSolverInterface):
 
     def is_optimal(self, suboptimal=False) -> bool:
         status = self.model.solution.get_status()
-        if status in [1, 101, 102]:
+        expected_name = [
+            "CPX_STAT_OPTIMAL",
+            "CPXMIP_OPTIMAL",
+            "CPXMIP_OPTIMAL_TOL",
+        ]
+        if suboptimal:
+            expected_name.append("CPX_STAT_NUM_BEST")
+        expected_code = [
+            solver_status_name_to_status_code[name] for name in expected_name
+        ]
+        if status in expected_code:
             return True
         if suboptimal and (status in [5, 115]):
             return True
@@ -615,7 +625,9 @@ class CplexInterface(base.BaseSolverInterface):
             raise ValueError(f"model.status={self.get_status_name()}")
 
     def get_status_name(self) -> str:
-        return self.model.solution.get_status_string()
+        return solver_status_code_to_status_name[
+            self.model.solution.get_status()
+        ]
 
     def get_objective_value(self) -> float:
         """Get the optimal objective value"""
