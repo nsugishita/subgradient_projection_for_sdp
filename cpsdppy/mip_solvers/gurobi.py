@@ -239,7 +239,10 @@ class GurobiInterface(base.BaseSolverInterface):
     def add_2x2_psd_variables(
         self, n: typing.Optional[int] = None
     ) -> typing.Any:
-        """
+        """Add a 2 by 2 PSD matrix variable
+
+        Examples
+        --------
         >>> m = GurobiInterface()
         >>> _ = m.add_2x2_psd_variables()
         >>> m.set_linear_objective_coefs(value=[0, 1, 0])
@@ -362,9 +365,11 @@ class GurobiInterface(base.BaseSolverInterface):
         return self.model.NumQConstrs
 
     def add_linear_constraints(
-        self, shape=None, sense="E", rhs=0.0, coef=None
+        self, shape=None, sense="E", rhs=0.0, coef=None, name=None
     ) -> np.ndarray:
         """Add linear constraints"""
+        if name is not None:
+            raise NotImplementedError
         sense = tobytearray(sense)
         if shape is not None:
             sense = np.broadcast_to(sense, shape)
