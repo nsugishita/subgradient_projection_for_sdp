@@ -40,6 +40,8 @@ class Config(config_utils.BaseConfig):
         # Parameter to control the regularization strength
         self.step_size: float = 1e-3
 
+        self.solver_interface: str = "gurobi"
+
         # Method to solve RMP model
         self.rmp_solver_method: str = "dual_simplex"
 

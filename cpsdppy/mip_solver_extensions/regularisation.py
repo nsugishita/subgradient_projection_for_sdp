@@ -94,12 +94,54 @@ class MoreuYoshidaRegularisation:
         logger.debug(f"{self.__class__.__name__} prehook")
         ss = self.step_size
         centre = self.proximal_centre
-        c = self.obj_coefs
+        c_x = self.obj_coefs
         ss_inv = 1 / (2 * ss)
-        vars = np.array(model.model.getVars())[: centre.size]
-        model.model.setObjective(
-            c @ vars + ss_inv * (vars - centre) @ (vars - centre)
-        )
+        solver_name = model.__class__.__name__.lower()
+        # sign = 1 if self.problem_data["objective_sense"] == "min" else -1
+        sign = 1  # TODO
+        if "gurobi" in solver_name:
+            vars = np.array(model.model.getVars())[: centre.size]
+            model.model.setObjective(
+                c_x @ vars + sign * ss_inv * (vars - centre) @ (vars - centre)
+            )
+        elif "cplex" in solver_name:
+            # This function makes the problem type to QP even if
+            # the coefficient is 0. Maybe we want to avoid calling it if not
+            # necessary?
+
+            # Becareful with the behavior of set_quadratic_coefficients!
+            # If one calls set_quadratic_coefficients(i, j, v) with distinct
+            # i, j, then the objective will be
+            #    obj = [v x_i x_j + v x_j x_i] / 2,
+            # or simply
+            #    obj = [2.0 v x_i x_j] / 2 = v x_i x_j.
+            # If i and j is equal, then
+            #    obj = [v x_i x_i] / 2.
+            # So, if i and j is different, the coefficient will be untouched,
+            # BUT IF I AND J IS EQUAL, THE COEFFICIENT WILL BE DIVIDED BY 2.
+            vars = np.arange(centre.size)
+            iter = enumerate(map(int, vars))
+            model.model.objective.set_quadratic_coefficients(
+                [(xi, xi, sign * ss_inv) for i, xi in iter]
+            )
+            iter = enumerate(
+                zip(
+                    map(int, vars),
+                    centre,
+                    c_x,
+                )
+            )
+            model.model.objective.set_linear(
+                [
+                    (
+                        xi,
+                        float(d - sign * c * ss_inv),
+                    )
+                    for i, (xi, c, d) in iter
+                ]
+            )
+        else:
+            raise ValueError(f"unknown solver name: {solver_name}")
 
     def solve_posthook(self, model):
         logger.debug(f"{self.__class__.__name__} posthook")

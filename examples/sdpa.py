@@ -71,7 +71,7 @@ def main() -> None:
 
     base_config = config_module.Config()
     base_config.time_limit = 600
-    base_config.iteration_limit = 100
+    base_config.iteration_limit = 20
     base_config.memory = 5
     config_module.parse_args(base_config, args)
 

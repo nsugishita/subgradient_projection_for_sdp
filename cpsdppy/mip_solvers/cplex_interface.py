@@ -504,7 +504,11 @@ class CplexInterface(base.BaseSolverInterface):
         )
 
     def set_linear_constraint_coefs(self, coefs=None) -> None:
-        self.model.linear_constraints.set_coefficients(coefs)
+        def cast(a):
+            x, y, z = a
+            return int(x), int(y), float(z)
+
+        self.model.linear_constraints.set_coefficients(map(cast, coefs))
 
     def set_linear_constraint_coefs_by_matrix(self, row, coef) -> None:
         if isinstance(coef, scipy.sparse.spmatrix):
