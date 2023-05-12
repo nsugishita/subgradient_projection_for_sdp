@@ -121,27 +121,36 @@ class MoreuYoshidaRegularisation:
             #    obj = [v x_i x_i] / 2.
             # So, if i and j is different, the coefficient will be untouched,
             # BUT IF I AND J IS EQUAL, THE COEFFICIENT WILL BE DIVIDED BY 2.
-            vars = np.arange(centre.size)
-            iter = enumerate(map(int, vars))
-            model.model.objective.set_quadratic_coefficients(
-                [(xi, xi, sign * ss_inv) for i, xi in iter]
-            )
-            iter = enumerate(
-                zip(
-                    map(int, vars),
-                    centre,
-                    c_x,
+            if solver_name == "cplex":
+                vars = np.arange(centre.size)
+                model.set_objective_quadratic_coefficient(
+                    vars, vars, sign * ss_inv
                 )
-            )
-            model.model.objective.set_linear(
-                [
-                    (
-                        xi,
-                        float(d - sign * c * ss_inv),
+                model.set_objective_coefficient(
+                    vars, c_x - sign * centre * ss_inv
+                )
+            else:
+                vars = np.arange(centre.size)
+                iter = enumerate(map(int, vars))
+                model.model.objective.set_quadratic_coefficients(
+                    [(xi, xi, sign * ss_inv) for i, xi in iter]
+                )
+                iter = enumerate(
+                    zip(
+                        map(int, vars),
+                        centre,
+                        c_x,
                     )
-                    for i, (xi, c, d) in iter
-                ]
-            )
+                )
+                model.model.objective.set_linear(
+                    [
+                        (
+                            xi,
+                            float(d - sign * c * ss_inv),
+                        )
+                        for i, (xi, c, d) in iter
+                    ]
+                )
         else:
             raise ValueError(f"unknown solver name: {solver_name}")
 
