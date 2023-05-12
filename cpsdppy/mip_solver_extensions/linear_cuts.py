@@ -10,6 +10,8 @@ import numpy as np
 import scipy.sparse
 import uniquelist
 
+from cpsdppy import config as _config
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,10 +21,9 @@ class LinearCuts:
     Examples
     --------
     >>> import cpsdppy
-    >>> config = cpsdppy.config.Config()
     >>> m = cpsdppy.mip_solvers.gurobi_interface.GurobiInterface()
     >>> _ = m.add_variables(lb=-2, ub=2, obj=[1, 2])
-    >>> linear_cuts = LinearCuts(m, config)
+    >>> linear_cuts = LinearCuts(m)
 
     [ 1 + x     y   ]
     [               ]  >=  0
@@ -65,14 +66,17 @@ class LinearCuts:
     0.0090   -0.3780,  -0.9355
     """
 
-    def __init__(self, model, config):
+    def __init__(self, model, config=None):
         """Initialise a LinearCuts instance"""
         self.linear_constraint_index = np.array([], dtype=int)
         self.added_iteration = np.array([], dtype=int)
         self.last_active_iteration = np.array([], dtype=int)
         self.iteration = 0
         self.model = weakref.ref(model)
-        self.config = config
+        if config is None:
+            self.config = _config.Config()
+        else:
+            self.config = config
 
         model.add_hooks(self)
 

@@ -10,6 +10,8 @@ import numpy as np
 import scipy.sparse
 import uniquelist
 
+from cpsdppy import config as _config
+
 logger = logging.getLogger(__name__)
 
 # TODO Improve dupliate cut check in LMICuts
@@ -23,10 +25,9 @@ class LMICuts:
     Examples
     --------
     >>> import cpsdppy
-    >>> config = cpsdppy.config.Config()
     >>> m = cpsdppy.mip_solvers.gurobi_interface.GurobiInterface()
     >>> _ = m.add_variables(lb=-2, ub=2, obj=[1, 2])
-    >>> lmi_cuts = LMICuts(m, config)
+    >>> lmi_cuts = LMICuts(m)
 
     [ 1 + x     y   ]
     [               ]  >=  0
@@ -70,7 +71,7 @@ class LMICuts:
      0.0000   -0.4470,  -0.8946
     """
 
-    def __init__(self, model, config):
+    def __init__(self, model, config=None):
         """Initialise a LMICuts instance"""
         self.linear_constraint_index = np.array([], dtype=int).reshape(0, 3)
         self.quadratic_constraint_index = np.array([], dtype=int)
@@ -81,7 +82,10 @@ class LMICuts:
         self.n = 0
         self.n_variables = model.get_n_variables()
         self.model = weakref.ref(model)
-        self.config = config
+        if config is None:
+            self.config = _config.Config()
+        else:
+            self.config = config
 
         model.add_hooks(self)
 

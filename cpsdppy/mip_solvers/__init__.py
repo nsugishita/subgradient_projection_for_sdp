@@ -3,6 +3,10 @@
 from cpsdppy.mip_solvers import cplex_interface, gurobi_interface  # noqa: F401
 
 
+def read(text):
+    return gurobi_interface.GurobiInterface.read_string(text)
+
+
 def get_solver_interface(name):
     name = name.lower()
     if name == "gurobi":
