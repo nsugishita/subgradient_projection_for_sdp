@@ -69,9 +69,8 @@ class save_log(object):
     --------
     >>> import logging
     >>> def foo():
-    ...     l = logging.getLogger()
-    ...     l.info('hello world')
-    ...     l.warning('this is a warning')
+    ...     logger = logging.getLogger()
+    ...     logger.warning('this is a warning')
     >>> with save_log() as f:
     ...     foo()
     >>> print(f.get())
@@ -81,6 +80,11 @@ class save_log(object):
     We need to configure the logger to see the log messages of level info
     or lower:
 
+    >>> import logging
+    >>> def foo():
+    ...     logger = logging.getLogger()
+    ...     logger.info('hello world')
+    ...     logger.warning('this is a warning')
     >>> logging.getLogger().setLevel(logging.INFO)
     >>> with save_log() as f:
     ...     foo()
@@ -92,10 +96,10 @@ class save_log(object):
 
     >>> logging.getLogger().setLevel(logging.INFO)
     >>> def foo():
-    ...     root = logging.getLogger('root')
-    ...     root.info('root log')
-    ...     child = logging.getLogger('child.logger')
-    ...     child.info('child log')
+    ...     root_logger = logging.getLogger()
+    ...     root_logger.info('root log')
+    ...     child_logger = logging.getLogger('child.logger')
+    ...     child_logger.info('child log')
     >>> with save_log(logger_name='child') as f:
     ...     foo()
     >>> print(f.get())
