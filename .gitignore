@@ -2,5 +2,6 @@ env
 build
 __pycache__/
 *.egg-info/
+log
 tmp
 vimquickrun.sh

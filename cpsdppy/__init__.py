@@ -4,6 +4,7 @@
 
 from cpsdppy import config  # noqa: F401
 from cpsdppy import linalg  # noqa: F401
+from cpsdppy import logging_helper  # noqa: F401
 from cpsdppy import mip_solver_extensions  # noqa: F401
 from cpsdppy import mip_solvers  # noqa: F401
 from cpsdppy import sdpa  # noqa: F401

@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 from cpsdppy import config as config_module
-from cpsdppy import sdpa
+from cpsdppy import logging_helper, sdpa
 from cpsdppy.sdp_solvers import cutting_plane, subgradient_projection
 
 logger = logging.getLogger(__name__)
@@ -27,18 +27,23 @@ def run(problem_data, config):
     cache_path = (
         f"tmp/sdpa/cache/{config._asstr(only_modified=True, shorten=True)}.pkl"
     )
+    log_path = (
+        f"tmp/sdpa/cache/{config._asstr(only_modified=True, shorten=True)}.txt"
+    )
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-    print(cache_path)
+    logger.info("cache:")
+    logger.info(cache_path)
     if os.path.exists(cache_path) and use_cache:
         with open(cache_path, "rb") as f:
             return pickle.load(f)
 
-    if config.solver == "subgradient_projection":
-        res = subgradient_projection.run(problem_data, config)
-    elif config.solver == "cutting_plane":
-        res = cutting_plane.run(problem_data, config)
-    else:
-        raise ValueError
+    with logging_helper.save_log(log_path):
+        if config.solver == "subgradient_projection":
+            res = subgradient_projection.run(problem_data, config)
+        elif config.solver == "cutting_plane":
+            res = cutting_plane.run(problem_data, config)
+        else:
+            raise ValueError
 
     with open(cache_path, "wb") as f:
         pickle.dump(res, f)
@@ -73,17 +78,15 @@ def main() -> None:
     args = parser.parse_args()
 
     base_config = config_module.Config()
-    base_config.time_limit = 600
+    base_config.time_limit = 30
     base_config.iteration_limit = 1000
     base_config.memory = 5
     config_module.parse_args(base_config, args)
 
-    handler = logging.StreamHandler()
-    logging.getLogger().addHandler(handler)
-    logging.getLogger().setLevel(logging.INFO)
+    logging_helper.setup()
 
-    logging.info(f"problem names: {args.problem_names}")
-    logging.info(f"step sizes: {args.step_sizes}")
+    logger.info(f"problem names: {args.problem_names}")
+    logger.info(f"step sizes: {args.step_sizes}")
 
     def setup_filter(setup):
         if setup.lmi_cuts_from_unique_vectors == 0:
