@@ -19,7 +19,7 @@ from cpsdppy.sdp_solvers import cutting_plane, subgradient_projection
 
 logger = logging.getLogger(__name__)
 
-use_cache = False
+use_cache = True
 
 # TODO Print time, hostcomputer etc at the beginning.
 # TODO Simplify Config.
@@ -244,7 +244,8 @@ def summary(results):
     df = df.sort_index()
     df["walltime"] = df["walltime"].astype(float)
     df["walltime"] = np.round(df["walltime"].values, 2)
-    print(df)
+    with pd.option_context("display.max_rows", 999):
+        print(df)
 
 
 def update_config(base_config, setup):
