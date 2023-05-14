@@ -58,13 +58,13 @@ class Config(config_utils.BaseConfig):
         self.n_linear_cuts_for_unregularised_rmp: int = -1
         self.n_linear_cuts_for_regularised_rmp: int = -1
 
-        self.eigen_comb_cut: int = 1
-
         self.lmi_cuts_from_unique_vectors: int = 1
 
         self.n_lmi_cuts: int = 0
         self.n_lmi_cuts_for_unregularised_rmp: int = -1
         self.n_lmi_cuts_for_regularised_rmp: int = -1
+
+        self.eigen_comb_cut: int = 1
 
         self.eval_lb_every: int = 1
 
