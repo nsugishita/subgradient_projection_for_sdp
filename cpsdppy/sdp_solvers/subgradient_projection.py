@@ -57,10 +57,6 @@ def run(problem_data, config):
     regularised_model.add_variables(lb=xlb, ub=xub, obj=objective_coef)
     unregularised_model.add_variables(lb=xlb, ub=xub, obj=objective_coef)
 
-    reg = mip_solver_extensions.MoreuYoshidaRegularisation(
-        regularised_model, config=config
-    )
-    reg.step_size = config.step_size
     reg_linear_cuts = mip_solver_extensions.LinearCuts(
         regularised_model, config
     )
@@ -106,7 +102,7 @@ def run(problem_data, config):
     best_ub = np.inf
 
     x = np.zeros(n_variables)
-    x = reg.project(x)
+    x = mip_solver_extensions.project(regularised_model, x)
 
     solver_status = "unknown"
 
@@ -151,28 +147,30 @@ def run(problem_data, config):
         # TODO Add cuts from all the constraints.
         if config.eval_lb_every > 0:
             common.add_cuts(
-                config,
-                unreg_linear_cuts,
-                unreg_lmi_cuts,
-                constr_svec_coefs[most_violated_constr_index],
-                constr_svec_offset[most_violated_constr_index],
-                x,
-                eval_x.eigenvalues[most_violated_constr_index],
-                eval_x.eigenvectors[most_violated_constr_index],
-                n_unreg_linear_cuts,
-                n_unreg_lmi_cuts,
+                config=config,
+                linear_cuts=unreg_linear_cuts,
+                lmi_cuts=unreg_lmi_cuts,
+                constr_svec_coef=constr_svec_coefs[most_violated_constr_index],
+                constr_svec_offset=constr_svec_offset[
+                    most_violated_constr_index
+                ],
+                x=x,
+                w=eval_x.eigenvalues[most_violated_constr_index],
+                v=eval_x.eigenvectors[most_violated_constr_index],
+                n_linear_cuts=n_unreg_linear_cuts,
+                n_lmi_cuts=n_unreg_lmi_cuts,
             )
         common.add_cuts(
-            config,
-            reg_linear_cuts,
-            reg_lmi_cuts,
-            constr_svec_coefs[most_violated_constr_index],
-            constr_svec_offset[most_violated_constr_index],
-            x,
-            eval_x.eigenvalues[most_violated_constr_index],
-            eval_x.eigenvectors[most_violated_constr_index],
-            n_reg_linear_cuts,
-            n_reg_lmi_cuts,
+            config=config,
+            linear_cuts=reg_linear_cuts,
+            lmi_cuts=reg_lmi_cuts,
+            constr_svec_coef=constr_svec_coefs[most_violated_constr_index],
+            constr_svec_offset=constr_svec_offset[most_violated_constr_index],
+            x=x,
+            w=eval_x.eigenvalues[most_violated_constr_index],
+            v=eval_x.eigenvectors[most_violated_constr_index],
+            n_linear_cuts=n_reg_linear_cuts,
+            n_lmi_cuts=n_reg_lmi_cuts,
         )
 
         # Do subgradient projection.
@@ -187,7 +185,7 @@ def run(problem_data, config):
             v = x - relaxation_parameter * funcval * subgrad / (
                 np.linalg.norm(subgrad) ** 2
             )
-            v = reg.project(v)
+            v = mip_solver_extensions.project(regularised_model, v)
         else:
             v = x
 
@@ -200,28 +198,30 @@ def run(problem_data, config):
         # TODO Add cuts from all the constraints.
         if config.eval_lb_every > 0:
             common.add_cuts(
-                config,
-                unreg_linear_cuts,
-                unreg_lmi_cuts,
-                constr_svec_coefs[most_violated_constr_index],
-                constr_svec_offset[most_violated_constr_index],
-                x,
-                eval_v.eigenvalues[most_violated_constr_index],
-                eval_v.eigenvectors[most_violated_constr_index],
-                n_unreg_linear_cuts,
-                n_unreg_lmi_cuts,
+                config=config,
+                linear_cuts=unreg_linear_cuts,
+                lmi_cuts=unreg_lmi_cuts,
+                constr_svec_coef=constr_svec_coefs[most_violated_constr_index],
+                constr_svec_offset=constr_svec_offset[
+                    most_violated_constr_index
+                ],
+                x=x,
+                w=eval_v.eigenvalues[most_violated_constr_index],
+                v=eval_v.eigenvectors[most_violated_constr_index],
+                n_linear_cuts=n_unreg_linear_cuts,
+                n_lmi_cuts=n_unreg_lmi_cuts,
             )
         common.add_cuts(
-            config,
-            reg_linear_cuts,
-            reg_lmi_cuts,
-            constr_svec_coefs[most_violated_constr_index],
-            constr_svec_offset[most_violated_constr_index],
-            x,
-            eval_v.eigenvalues[most_violated_constr_index],
-            eval_v.eigenvectors[most_violated_constr_index],
-            n_reg_linear_cuts,
-            n_reg_lmi_cuts,
+            config=config,
+            linear_cuts=reg_linear_cuts,
+            lmi_cuts=reg_lmi_cuts,
+            constr_svec_coef=constr_svec_coefs[most_violated_constr_index],
+            constr_svec_offset=constr_svec_offset[most_violated_constr_index],
+            x=x,
+            w=eval_v.eigenvalues[most_violated_constr_index],
+            v=eval_v.eigenvectors[most_violated_constr_index],
+            n_linear_cuts=n_reg_linear_cuts,
+            n_lmi_cuts=n_reg_lmi_cuts,
         )
 
         step_size_manager.feed(
@@ -232,9 +232,10 @@ def run(problem_data, config):
             fv=eval_v.f,
             gv=eval_v.g,
         )
-        reg.step_size = step_size_manager.step_size
-
-        x = reg.project(v - reg.step_size * objective_coef)
+        step_size = step_size_manager.step_size
+        x = mip_solver_extensions.project(
+            regularised_model, v - step_size * objective_coef
+        )
 
         _lb_gap = common.gap(
             best_lb,
@@ -254,7 +255,7 @@ def run(problem_data, config):
             ub=ub,
             best_ub=best_ub,
             ub_gap=_ub_gap,
-            step_size=reg.step_size,
+            step_size=step_size,
             x=x,
             fx=eval_x.f,
             fx_gap=eval_x.f_gap,
@@ -303,7 +304,7 @@ def run(problem_data, config):
             f"  {format_number(-_lb_gap * 100, width=11)}",
             f"  {n_rcuts:5d}",
             f"  {n_ucuts:5d}",
-            f"  {reg.step_size:7.1e}",
+            f"  {step_size_manager.step_size:7.1e}",
         ]
         if iteration % (config.log_every * 20) == 0:
             logger.info("".join(head))

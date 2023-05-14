@@ -327,13 +327,18 @@ def add_cuts(
         linear_cuts.add_linear_cuts(coef=-cut_coef, offset=-cut_offset)
 
     if config.eigen_comb_cut:
-        v0 = np.sum(np.clip(w, None, 0.0) * v, axis=1)
-        norm = np.linalg.norm(v0)
-        if norm != 0:
-            v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
-            cut_coef = v0v0t @ constr_svec_coef
-            cut_offset = v0v0t @ constr_svec_offset
-            linear_cuts.add_linear_cuts(coef=-cut_coef, offset=-cut_offset)
+        negative_matrix = -(v * w.clip(None, 0)) @ v.T
+        # negative_matrix is PSD. Thus,
+        #   negative_matrix * (sum A x - rhs) >= 0,
+        # or equivalently
+        #   -sum ((negative_matrix * A) x) <= -negative_matrix * rhs
+        norm = (-w).max()
+        if norm >= 1e-3:
+            negative_matrix = negative_matrix / norm
+            negative_vec = cpsdppy.linalg.svec(negative_matrix)
+            subgrad = (negative_vec[None, :] @ constr_svec_coef).ravel()
+            rhs = negative_vec.dot(constr_svec_offset)
+            linear_cuts.add_linear_cuts(coef=-subgrad, offset=-rhs)
 
 
 if __name__ == "__main__":
