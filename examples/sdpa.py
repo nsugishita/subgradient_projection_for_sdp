@@ -52,12 +52,15 @@ def main() -> None:
         "--problem-names",
         type=str,
         nargs="+",
-        # default=["theta1", "theta2", "theta3"],
-        # default=["gpp100"],
-        # default=["gpp124-1"],
-        # default=["gpp250-1"],
-        default=["gpp500-1"],
-        # default=["mcp250-1"],
+        default=[
+            "theta1",
+            "theta2",
+            "theta3",
+            "mcp250-1",
+            "mcp500-1",
+            "gpp250-1",
+            "gpp500-1",
+        ],
     )
     parser.add_argument(
         "--step-sizes",
@@ -71,7 +74,7 @@ def main() -> None:
 
     base_config = config_module.Config()
     base_config.time_limit = 600
-    base_config.iteration_limit = 20
+    base_config.iteration_limit = 1000
     base_config.memory = 5
     config_module.parse_args(base_config, args)
 
@@ -98,7 +101,7 @@ def main() -> None:
             "step_size",
             args.step_sizes,
             "cut_type",
-            ["linear"],
+            ["linear", "lmi", "lmi-comb"],
             # ["lmi", "linear"],
             "n_cuts",
             # [1, 2, 4, 6, 8],
@@ -116,7 +119,7 @@ def main() -> None:
 
     def color(setup):
         return "C" + str(
-            ["lmi", "linear", "naivelinear"].index(setup.cut_type)
+            ["lmi", "lmi-comb", "linear", "naivelinear"].index(setup.cut_type)
         )
 
     results: dict = dict()
@@ -226,7 +229,7 @@ def update_config(base_config, setup):
     config.step_size = setup.step_size
     if setup.lb:
         config.initial_cut_type = (
-            "lmi" if setup.cut_type == "lmi" else "linear"
+            "lmi" if "lmi" in setup.cut_type else "linear"
         )
     else:
         config.initial_cut_type = "none"
@@ -236,6 +239,10 @@ def update_config(base_config, setup):
         config.n_linear_cuts = 0
         config.n_lmi_cuts = n
         config.eigen_comb_cut = 0
+    elif setup.cut_type == "lmi-comb":
+        config.n_linear_cuts = 0
+        config.n_lmi_cuts = n
+        config.eigen_comb_cut = 1
     elif setup.cut_type == "naivelinear":
         config.n_linear_cuts = n
         config.n_lmi_cuts = 0

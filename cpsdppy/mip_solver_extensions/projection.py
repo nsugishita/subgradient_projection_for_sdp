@@ -54,6 +54,10 @@ def project(model, x):
         # Tighten the regularisation and try again.
         regularisation *= 2
     projection = model.get_solution()[: len(x)]
+    # TODO Use hooks to properly process variable deletion.
+    original_linear_objective_coefs = original_linear_objective_coefs[
+        : model.get_n_variables()
+    ]
     _set_objective(
         model=model,
         type="linear",
