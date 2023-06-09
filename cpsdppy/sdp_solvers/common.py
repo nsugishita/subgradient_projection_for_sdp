@@ -281,7 +281,7 @@ def add_cuts(
 ):
     # TODO Improve efficiency using initialisation routine.
 
-    for i in range(n_lmi_cuts):
+    for i in range(min(n_lmi_cuts, v.shape[1] // 2)):
         if config.lmi_cuts_from_unique_vectors:
             v0 = v[:, 2 * i]
             v1 = v[:, 2 * i + 1]
@@ -313,7 +313,7 @@ def add_cuts(
         )
         lmi_cuts.add_lmi_cuts(coef=cut_coef, offset=cut_offset)
 
-    for i in range(n_linear_cuts):
+    for i in range(min(n_linear_cuts, v.shape[1])):
         if n_lmi_cuts == 0:
             v0 = v[:, i]
         else:
