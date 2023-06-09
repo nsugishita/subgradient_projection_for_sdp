@@ -3,6 +3,7 @@
 """Subgradient projection solver"""
 
 
+import itertools
 import logging
 import os
 
@@ -110,7 +111,7 @@ def run(problem_data, config):
     timer = utils.timer()
     step_size_manager = StepSizeManager(config)
 
-    for iteration in range(10000):
+    for iteration in itertools.count():
         if 0 < config.iteration_limit <= iteration:
             solver_status = "iteration_limit"
             break
