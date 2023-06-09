@@ -19,13 +19,11 @@ from cpsdppy.sdp_solvers import cutting_plane, subgradient_projection
 
 logger = logging.getLogger(__name__)
 
-use_cache = True
-
 # TODO Print time, hostcomputer etc at the beginning.
 # TODO Simplify Config.
 
 
-def run(problem_data, config):
+def run(problem_data, config, disable_cache):
     assert config.solver in ["subgradient_projection", "cutting_plane"]
     cache_path = (
         f"tmp/sdpa/cache/{config._asstr(only_modified=True, shorten=True)}.pkl"
@@ -38,7 +36,7 @@ def run(problem_data, config):
     logger.info(cache_path)
     logger.info("log messages are saved in:")
     logger.info(log_path)
-    if os.path.exists(cache_path) and use_cache:
+    if os.path.exists(cache_path) and (not disable_cache):
         with open(cache_path, "rb") as f:
             return pickle.load(f)
 
@@ -50,8 +48,9 @@ def run(problem_data, config):
         else:
             raise ValueError
 
-    with open(cache_path, "wb") as f:
-        pickle.dump(res, f)
+    if not disable_cache:
+        with open(cache_path, "wb") as f:
+            pickle.dump(res, f)
     return res
 
 
@@ -87,12 +86,12 @@ def main() -> None:
             # "gpp124-4",
             "gpp250-1",
             "gpp250-2",
-            "gpp250-3",
-            "gpp250-4",
+            # "gpp250-3",
+            # "gpp250-4",
             "gpp500-1",
             "gpp500-2",
-            "gpp500-3",
-            "gpp500-4",
+            # "gpp500-3",
+            # "gpp500-4",
             # "hinf1",
             # "hinf2",
             # "hinf3",
@@ -120,12 +119,12 @@ def main() -> None:
             # "mcp124-4",
             "mcp250-1",
             "mcp250-2",
-            "mcp250-3",
-            "mcp250-4",
+            # "mcp250-3",
+            # "mcp250-4",
             "mcp500-1",
             "mcp500-2",
-            "mcp500-3",
-            "mcp500-4",
+            # "mcp500-3",
+            # "mcp500-4",
             # "qap5",
             # "qap6",
             # "qap7",
@@ -160,6 +159,14 @@ def main() -> None:
         # default=[100, 1000],
         default=[1],
     )
+    parser.add_argument(
+        "--disable-cache",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--smoke-test",
+        action="store_true",
+    )
     config_module.add_arguments(parser)
     args = parser.parse_args()
 
@@ -187,25 +194,46 @@ def main() -> None:
                 return False
         return True
 
-    setups = list(
-        namedtuples_from_product(
-            "setup",
-            "problem_name",
-            args.problem_names,
-            "step_size",
-            args.step_sizes,
-            "cut_type",
-            ["linear", "lmi"],
-            "n_cuts",
-            [0, 1, 2, 4],
-            "eigen_comb_cut",
-            [0, 1],
-            "lmi_cuts_from_unique_vectors",
-            [1],
-            "lb",
-            [False],
+    if args.smoke_test:
+        setups = list(
+            namedtuples_from_product(
+                "setup",
+                "problem_name",
+                args.problem_names,
+                "step_size",
+                args.step_sizes,
+                "cut_type",
+                ["linear"],
+                "n_cuts",
+                [1],
+                "eigen_comb_cut",
+                [1],
+                "lmi_cuts_from_unique_vectors",
+                [1],
+                "lb",
+                [False],
+            )
         )
-    )
+    else:
+        setups = list(
+            namedtuples_from_product(
+                "setup",
+                "problem_name",
+                args.problem_names,
+                "step_size",
+                args.step_sizes,
+                "cut_type",
+                ["linear", "lmi"],
+                "n_cuts",
+                [0, 1, 2, 4],
+                "eigen_comb_cut",
+                [0, 1],
+                "lmi_cuts_from_unique_vectors",
+                [1],
+                "lb",
+                [False],
+            )
+        )
     setups = list(filter(setup_filter, setups))
 
     def label(setup):
@@ -228,13 +256,19 @@ def main() -> None:
 
         config.solver = "subgradient_projection"
         results.append(
-            (config._astuple(shorten=True), run(problem_data, config))
+            (
+                config._astuple(shorten=True),
+                run(problem_data, config, args.disable_cache),
+            )
         )
 
         if setup.lb:
             config.solver = "cutting_plane"
             results.append(
-                (config._astuple(shorten=True), run(problem_data, config))
+                (
+                    config._astuple(shorten=True),
+                    run(problem_data, config, args.disable_cache),
+                )
             )
 
         summary(results)
