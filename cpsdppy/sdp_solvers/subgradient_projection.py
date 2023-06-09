@@ -57,6 +57,16 @@ def run(problem_data, config):
     objective_coef = problem_data["objective_coefficient"]
     regularised_model.add_variables(lb=xlb, ub=xub, obj=objective_coef)
     unregularised_model.add_variables(lb=xlb, ub=xub, obj=objective_coef)
+    regularised_model.add_linear_constraints(
+        coef=problem_data["linear_constraint_coefficient"],
+        rhs=problem_data["linear_constraint_rhs"],
+        sense=problem_data["linear_constraint_sense"],
+    )
+    unregularised_model.add_linear_constraints(
+        coef=problem_data["linear_constraint_coefficient"],
+        rhs=problem_data["linear_constraint_rhs"],
+        sense=problem_data["linear_constraint_sense"],
+    )
 
     reg_linear_cuts = mip_solver_extensions.LinearCuts(
         regularised_model, config
@@ -240,13 +250,13 @@ def run(problem_data, config):
 
         _lb_gap = common.gap(
             best_lb,
-            problem_data["target_objective"],
-            problem_data["target_objective"],
+            problem_data.get("target_objective", np.nan),
+            problem_data.get("target_objective", np.nan),
         )
         _ub_gap = common.gap(
             best_ub,
-            problem_data["target_objective"],
-            problem_data["target_objective"],
+            problem_data.get("target_objective", np.nan),
+            problem_data.get("target_objective", np.nan),
         )
 
         journal.set_iteration_items(
