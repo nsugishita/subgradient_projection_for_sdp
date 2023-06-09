@@ -334,11 +334,39 @@ def add_cuts(
         #   -sum ((negative_matrix * A) x) <= -negative_matrix * rhs
         norm = (-w).max()
         if norm >= 1e-3:
-            negative_matrix = negative_matrix / norm
+            # The subgradient of the distance function can be computed
+            # by normalising the negative matrix.
+            # negative_matrix = negative_matrix / norm
             negative_vec = cpsdppy.linalg.svec(negative_matrix)
             subgrad = (negative_vec[None, :] @ constr_svec_coef).ravel()
             rhs = negative_vec.dot(constr_svec_offset)
             linear_cuts.add_linear_cuts(coef=-subgrad, offset=-rhs)
+
+        # The following lines are equivalent, but only use v^T A v.
+        # However, they are much slower than the above one.
+        # subgrad_list = []
+        # offset_lits = []
+        # for i in range(v.shape[1]):
+        #     v0 = v[:, i]
+        #     w0 = w[i]
+        #     if w0 >= 0:
+        #         break
+        #     v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
+        #     cut_coef = v0v0t @ constr_svec_coef
+        #     cut_offset = v0v0t @ constr_svec_offset
+        #     subgrad_list.append(-w0 * cut_coef)
+        #     offset_lits.append(-w0 * cut_offset)
+        # if n_linear_cuts > 0:
+        #     if len(subgrad_list) <= 1:
+        #         return
+        # else:
+        #     if len(subgrad_list) == 0:
+        #         return
+        # subgrad=np.sum(subgrad_list, axis=0)
+        # rhs=np.sum(offset_lits, axis=0)
+        # if np.linalg.norm(subgrad, ord=2) < 1e-4:
+        #     return
+        # linear_cuts.add_linear_cuts(coef=-subgrad, offset=-rhs)
 
 
 if __name__ == "__main__":
