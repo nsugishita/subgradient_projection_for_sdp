@@ -20,7 +20,7 @@ class Config(config_utils.BaseConfig):
         self.solver: str = ""
 
         # Suboptimality tolerance. See 'termination_criteria'.
-        self.tol: float = 1e-2
+        self.tol: float = 1e-3
 
         self.feas_tol: float = 1e-3
 
@@ -44,6 +44,9 @@ class Config(config_utils.BaseConfig):
 
         # Method to solve RMP model
         self.rmp_solver_method: str = "dual_simplex"
+
+        self.projection_after_feasibility_step: int = 1
+        self.projection_after_optimality_step: int = 1
 
         self.memory: int = -1
         self.cut_deletion_criterion: str = "activity"

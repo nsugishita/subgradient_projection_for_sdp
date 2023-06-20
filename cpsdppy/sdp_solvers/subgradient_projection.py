@@ -196,7 +196,8 @@ def run(problem_data, config):
             v = x - relaxation_parameter * funcval * subgrad / (
                 np.linalg.norm(subgrad) ** 2
             )
-            v = mip_solver_extensions.project(regularised_model, v)
+            if config.projection_after_feasibility_step:
+                v = mip_solver_extensions.project(regularised_model, v)
         else:
             v = x
 
@@ -244,9 +245,9 @@ def run(problem_data, config):
             gv=eval_v.g,
         )
         step_size = step_size_manager.step_size
-        x = mip_solver_extensions.project(
-            regularised_model, v - step_size * objective_coef
-        )
+        x = v - step_size * objective_coef
+        if config.projection_after_optimality_step:
+            x = mip_solver_extensions.project(regularised_model, x)
 
         _lb_gap = common.gap(
             best_lb,
