@@ -436,6 +436,9 @@ class CplexInterface(base.BaseSolverInterface):
             rhs = np.broadcast_to(rhs, shape)
         else:
             sense, rhs = np.broadcast_arrays(sense, rhs)
+            shape = rhs.shape
+        if np.prod(shape) == 0:
+            return np.array([], dtype=int)
         kwargs = dict(
             senses=tostr(sense.ravel()), rhs=rhs.astype(float).ravel()
         )
