@@ -132,7 +132,9 @@ def _set_objective(model, type, lin_cost, quad_cost, centre):
                 ]
             )
         else:
-            model.model.objective.set_linear(zip(map(int, vars), lin_cost))
+            model.model.objective.set_linear(
+                zip(range(len(lin_cost)), lin_cost)
+            )
     else:
         raise ValueError(f"unknown solver name: {solver_name}")
 
