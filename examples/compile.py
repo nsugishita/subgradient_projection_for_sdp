@@ -80,6 +80,13 @@ def table1(problem_names):
         config.time_limit = 120
         # config.projection_after_feasibility_step = 0
 
+        mosek_config = config_module.copy(base_config)
+        mosek_config.problem_name = problem_name
+        mosek_config.tol = tol
+        mosek_config.solver = "mosek"
+        mosek_config.time_limit = 120
+        mosek_config.log_to_logger = 1
+
         if method == "subgrad":
             config.solver = "subgradient_projection"
             config.eval_lb_every = 0
@@ -97,7 +104,16 @@ def table1(problem_names):
         elif method == "cosmo":
             time = cosmo_df.loc[(problem_name, tol), "time"]
         elif method == "mosek":
-            time = np.nan
+            cache_path = (
+                "tmp/sdpa/v4/cache/data/"
+                f"{mosek_config._asstr(only_modified=True, shorten=True)}.pkl"
+            )
+            if os.path.exists(cache_path):
+                with open(cache_path, "rb") as f:
+                    loaded = pickle.load(f)
+                    time = loaded["walltime"]
+            else:
+                time = np.nan
         else:
             raise ValueError(f"unknown method name '{method}'")
 
