@@ -19,6 +19,9 @@ class Config(config_utils.BaseConfig):
         self.problem_name: str = ""
         self.solver: str = ""
 
+        # Used in Mosek
+        self.n_threads: int = 1
+
         # Suboptimality tolerance. See 'termination_criteria'.
         self.tol: float = 1e-3
 
@@ -76,6 +79,11 @@ class Config(config_utils.BaseConfig):
         self.use_dual_to_check_active_cut: int = 0
 
         self.log_eigenvectors: int = 0
+
+        # Used in Mosek
+        self.log_to_stdout: int = 0
+        # Used in Mosek
+        self.log_to_logger: int = 0
 
 
 def add_arguments(parser, conflict="warn", _stacklevel=3):

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from . import mosek_utils  # noqa: F401
 from .format_elapse import format_elapse  # noqa: F401
 from .format_number import format_number  # noqa: F401
 from .journal import IterationJournal  # noqa: F401

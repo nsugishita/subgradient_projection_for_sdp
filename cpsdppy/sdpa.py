@@ -25,22 +25,22 @@ s.t   sum_{j = 1}^m A_{ij} x_j - A_{i0} : PSD   for i = 1, 2, ..., n
       B x >= b,
       x_lb <= x <= x_ub.
 
-name in program                  symbol       description
--------------------------------  -----------  ---------------------------------
-n_variables                      n            int
-objective_sense                  min max      'min', 'max'
-objective_offset                 offset       float
-variable_lb                      x_lb         (n_vars,) array of float
-variable_ub                      x_ub         (n_vars,) array of float
-objective_coefficient            c            (n_vars,) array of float
-linear_constraint_coefficient    B            (n_cons, n_vars) COO
-linear_constraint_offset         b            (n_cons,) array of float
-linear_constraint_sense          <= = >=      (n_cons,) array of 'E', 'G', 'L'
-lmi_constraint_coefficient       A_{ij}
-lmi_constraint_offset            A_{i0}
-lmi_svec_constraint_coefficient
-lmi_svec_constraint_offset
--------------------------------  -----------  --------------------------------
+name in program                  symbol      description
+-------------------------------  ----------  ---------------------------------
+n_variables                      n           int
+objective_sense                  min max     'min', 'max'
+objective_offset                 offset      float
+variable_lb                      x_lb        (n_vars,) array of float
+variable_ub                      x_ub        (n_vars,) array of float
+objective_coefficient            c           (n_vars,) array of float
+linear_constraint_coefficient    B           (n_cons, n_vars) COO
+linear_constraint_offset         b           (n_cons,) array of float
+linear_constraint_sense          <= = >=     (n_cons,) array of 'E', 'G', 'L'
+lmi_constraint_coefficient       A_{ij}      (n, m)-list of (n_vars,n_vars) COO
+lmi_constraint_offset            A_{i0}      n-list of (n_vars,n_vars) COO
+lmi_svec_constraint_coefficient              n-list of COO
+lmi_svec_constraint_offset                   n-list of 1d array
+-------------------------------  ----------  --------------------------------
 """
 
 import collections
