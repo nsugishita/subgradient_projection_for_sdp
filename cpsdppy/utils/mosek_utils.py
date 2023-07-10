@@ -199,6 +199,8 @@ def _parse_mosek_log(log, log_walltime):
             if line.startswith("ITE"):
                 main_iteration = True
             continue
+        if line.startswith("Maximum"):
+            continue
         if line.startswith("Optimizer terminated"):
             break
         lines.append(list(map(float, line.split())))

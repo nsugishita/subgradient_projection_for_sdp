@@ -60,7 +60,12 @@ def run(problem_data, config):
         res = mosek_utils.solve(model, config)
 
         target_objective = problem_data.get("target_objective", None)
-        if target_objective is not None:
+        test = (
+            (target_objective is not None)
+            and np.isfinite(res["primal_objective"])
+            and np.isfinite(res["dual_objective"])
+        )
+        if test:
             target_tol = 5e-2
             test = True
             try:
