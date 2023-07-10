@@ -18,22 +18,34 @@ def run(problem_data, config):
 
         for block_index in range(n_blocks):
             # sum_{j = 1}^m A_{ij} x_j - A_{i0} : PSD
-            Aij = problem_data["lmi_constraint_coefficient"][block_index]
-            Ai0 = problem_data["lmi_constraint_offset"][block_index]
-            np.testing.assert_equal(type(Aij), list)
-            np.testing.assert_equal(type(Aij[0]), scipy.sparse.csr_matrix)
-            np.testing.assert_equal(type(Ai0), scipy.sparse.csr_matrix)
+            coef = problem_data["lmi_constraint_coefficient"][block_index]
+            offset = problem_data["lmi_constraint_offset"][block_index]
+            np.testing.assert_equal(type(coef), list)
+            np.testing.assert_equal(len(coef), c.size)
+            if c.size > 0:
+                np.testing.assert_equal(type(coef[0]), scipy.sparse.csr_matrix)
+            np.testing.assert_equal(type(offset), scipy.sparse.csr_matrix)
             matrices = []
             matrices.append(
-                fusion.Expr.neg(fusion.Expr.constTerm(Ai0.todense()))
+                fusion.Expr.neg(fusion.Expr.constTerm(offset.todense()))
             )
 
-            for j in range(len(Aij)):
-                _t = fusion.Expr.reshape(
-                    fusion.Expr.repeat(t.index([j]), np.prod(Aij[j].shape), 0),
-                    list(Aij[j].shape),
+            for j in range(len(coef)):
+                coefj_scipy = coef[j].tocoo()
+                coefj_fusion = fusion.Matrix.sparse(
+                    coefj_scipy.shape[0],
+                    coefj_scipy.shape[1],
+                    coefj_scipy.row,
+                    coefj_scipy.col,
+                    coefj_scipy.data,
                 )
-                matrices.append(fusion.Expr.mulElm(_t, Aij[j].todense()))
+                _t = fusion.Expr.reshape(
+                    fusion.Expr.repeat(
+                        t.index([j]), np.prod(coef[j].shape), 0
+                    ),
+                    list(coef[j].shape),
+                )
+                matrices.append(fusion.Expr.mulElm(_t, coefj_fusion))
             matrices = [
                 fusion.Expr.reshape(x, np.r_[1, x.getShape()])
                 for x in matrices
