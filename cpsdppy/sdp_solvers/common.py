@@ -324,7 +324,7 @@ def add_cuts(
         v0v0t = cpsdppy.linalg.svec(v0[:, None] @ v0[None, :])
         cut_coef = v0v0t @ constr_svec_coef
         cut_offset = v0v0t @ constr_svec_offset
-        linear_cuts.add_linear_cuts(coef=-cut_coef, offset=-cut_offset)
+        linear_cuts.add_linear_cuts(coef=-cut_coef, offset=-cut_offset, data=1)
 
     if config.eigen_comb_cut:
         negative_matrix = -(v * w.clip(None, 0)) @ v.T
@@ -340,7 +340,7 @@ def add_cuts(
             negative_vec = cpsdppy.linalg.svec(negative_matrix)
             subgrad = (negative_vec[None, :] @ constr_svec_coef).ravel()
             rhs = negative_vec.dot(constr_svec_offset)
-            linear_cuts.add_linear_cuts(coef=-subgrad, offset=-rhs)
+            linear_cuts.add_linear_cuts(coef=-subgrad, offset=-rhs, data=2)
 
         # The following lines are equivalent, but only use v^T A v.
         # However, they are much slower than the above one.
