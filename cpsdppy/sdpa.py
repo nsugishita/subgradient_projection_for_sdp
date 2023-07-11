@@ -36,8 +36,8 @@ objective_coefficient            c           (n_vars,) array of float
 linear_constraint_coefficient    B           (n_cons, n_vars) COO
 linear_constraint_offset         b           (n_cons,) array of float
 linear_constraint_sense          <= = >=     (n_cons,) array of 'E', 'G', 'L'
-lmi_constraint_coefficient       A_{ij}      (n, m)-list of (n_vars,n_vars) COO
-lmi_constraint_offset            A_{i0}      n-list of (n_vars,n_vars) COO
+lmi_constraint_coefficient       A_{ij}      (n, m)-list of COO
+lmi_constraint_offset            A_{i0}      n-list of COO
 lmi_svec_constraint_coefficient              n-list of COO
 lmi_svec_constraint_offset                   n-list of 1d array
 -------------------------------  ----------  --------------------------------
