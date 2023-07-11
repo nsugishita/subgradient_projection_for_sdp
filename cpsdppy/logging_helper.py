@@ -49,6 +49,8 @@ def setup(dir: str = "log", prefix: str = "") -> None:
 
     os.makedirs("log", exist_ok=True)
     for key in ["debugfile", "infofile"]:
+        if key not in config["handlers"]:
+            continue
         symlink_path = os.path.join(
             "log", key.replace("file", "") + "_link.txt"
         )
@@ -205,8 +207,6 @@ default_config = {
         "level": "DEBUG",
         "handlers": [
             "console",
-            "debugfile",
-            "infofile",
             "debugfile",
             "infofile",
         ],
