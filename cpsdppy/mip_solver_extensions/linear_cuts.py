@@ -72,6 +72,10 @@ class LinearCuts:
         self.modelled_cut_added_iteration = np.array([], dtype=int)
         self.modelled_cut_last_active_iteration = np.array([], dtype=int)
         self.modelled_cut_cut_id = np.array([], dtype=int)
+        self.modelled_cut_coef = np.array([], dtype=float).reshape(
+            0, model.get_n_variables()
+        )
+        self.modelled_cut_offset = np.array([], dtype=float)
 
         self.input_cut_cut_id = np.array([], dtype=int)
         self.input_cut_iteration = np.array([], dtype=int)
@@ -95,11 +99,6 @@ class LinearCuts:
             self.config = config
 
         model.add_hooks(self)
-
-        self.coef = np.array([], dtype=float).reshape(
-            0, model.get_n_variables()
-        )
-        self.offset = np.array([], dtype=float)
 
         if self.config.duplicate_cut_check:
             self.cut_coef_unique_list = uniquelist.UniqueArrayList(
@@ -176,8 +175,12 @@ class LinearCuts:
             row = new_constraint_index[coef.row]
             model.set_linear_constraint_coefs(zip(row, coef.col, coef.data))
 
-            self.coef = np.concatenate([self.coef, coef.toarray()])
-            self.offset = np.concatenate([self.offset, offset])
+            self.modelled_cut_coef = np.concatenate(
+                [self.modelled_cut_coef, coef.toarray()]
+            )
+            self.modelled_cut_offset = np.concatenate(
+                [self.modelled_cut_offset, offset]
+            )
         else:
             coef = np.atleast_2d(coef)
             offset = np.atleast_1d(offset)
@@ -189,8 +192,12 @@ class LinearCuts:
             col = np.tile(np.arange(coef.shape[1]), n_new_cuts)
             model.set_linear_constraint_coefs(zip(row, col, coef.ravel()))
 
-            self.coef = np.concatenate([self.coef, coef])
-            self.offset = np.concatenate([self.offset, offset])
+            self.modelled_cut_coef = np.concatenate(
+                [self.modelled_cut_coef, coef]
+            )
+            self.modelled_cut_offset = np.concatenate(
+                [self.modelled_cut_offset, offset]
+            )
         self.modelled_cut_linear_constraint_index = np.concatenate(
             [
                 self.modelled_cut_linear_constraint_index,
@@ -250,7 +257,7 @@ class LinearCuts:
             self.modelled_cut_cut_id = self.modelled_cut_cut_id[kept]
             if self.config.duplicate_cut_check:
                 self.cut_coef_unique_list.erase(dropped)
-            self.coef = self.coef[kept]
+            self.modelled_cut_coef = self.modelled_cut_coef[kept]
             self.offset = self.offset[kept]
         logger.debug(f"{self.__class__.__name__} removed {dropped.size} cuts")
 
@@ -280,6 +287,27 @@ class LinearCuts:
         ]
 
         self.solve_count += 1
+
+    def dump_data(self, out=None, prefix=""):
+        if out is None:
+            out = dict()
+
+        if prefix and (not prefix.endswith("_")):
+            prefix = prefix + "_"
+
+        dumped = {
+            "modelled_cut_coef": "cut_coef",
+            "modelled_cut_offset": "cut_offset",
+        }
+        for key_from, key_to in dumped.items():
+            out[prefix + key_to] = getattr(self, key_from)
+
+        _cut_id, _idx = np.unique(self.input_cut_cut_id, return_index=True)
+        _cut_data = self.input_cut_cut_data[_idx]
+
+        out["cut_data"] = _cut_data[self.modelled_cut_cut_id]
+
+        return out
 
 
 if __name__ == "__main__":

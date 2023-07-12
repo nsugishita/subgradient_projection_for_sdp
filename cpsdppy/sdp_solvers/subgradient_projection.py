@@ -112,8 +112,12 @@ def run(problem_data, config):
     best_lb = -np.inf
     best_ub = np.inf
 
-    x = np.zeros(n_variables)
+    if "initial_x" in problem_data:
+        x = np.broadcast_to(problem_data["initial_x"], (n_variables,))
+    else:
+        x = np.zeros(n_variables)
     x = mip_solver_extensions.project(regularised_model, x)
+    initial_x = x
 
     solver_status = "unknown"
 
@@ -369,10 +373,12 @@ def run(problem_data, config):
             stepsize=config.step_size,
             time_limit=config.time_limit,
             iteration_limit=config.iteration_limit,
+            initial_x=initial_x,
         )
     )
     journal.dump_data(out=result)
     timer.dump_data(out=result)
+    reg_linear_cuts.dump_data(out=result)
     for key in result:
         result[key] = np.asarray(result[key])
     return result
