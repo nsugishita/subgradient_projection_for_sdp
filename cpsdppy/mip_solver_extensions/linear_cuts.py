@@ -258,7 +258,7 @@ class LinearCuts:
             if self.config.duplicate_cut_check:
                 self.cut_coef_unique_list.erase(dropped)
             self.modelled_cut_coef = self.modelled_cut_coef[kept]
-            self.offset = self.offset[kept]
+            self.modelled_cut_offset = self.modelled_cut_offset[kept]
         logger.debug(f"{self.__class__.__name__} removed {dropped.size} cuts")
 
     def solve_exit_hook(self, model):
