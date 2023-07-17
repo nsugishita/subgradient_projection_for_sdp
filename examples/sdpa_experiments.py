@@ -18,10 +18,7 @@ from cpsdppy.sdp_solvers import subgradient_projection
 
 logger = logging.getLogger(__name__)
 
-# TODO Print time, hostcomputer etc at the beginning.
-# TODO Simplify Config.
-
-version = "v4"
+version = "v5"
 tmp_dir = f"tmp/sdpa/{version}/cache"
 
 
@@ -61,43 +58,39 @@ def main() -> None:
         "--problem-names",
         type=str,
         nargs="+",
-        # default=[
-        #     # "gpp100",
-        #     # "gpp124-1",
-        #     # "gpp124-2",
-        #     # "gpp124-3",
-        #     # "gpp124-4",
-        #     "gpp250-1",
-        #     "gpp250-2",
-        #     "gpp250-3",
-        #     "gpp250-4",
-        #     "gpp500-1",
-        #     "gpp500-2",
-        #     "gpp500-3",
-        #     "gpp500-4",
-        #     # "mcp100",
-        #     # "mcp124-1",
-        #     # "mcp124-2",
-        #     # "mcp124-3",
-        #     # "mcp124-4",
-        #     "mcp250-1",
-        #     "mcp250-2",
-        #     "mcp250-3",
-        #     "mcp250-4",
-        #     "mcp500-1",
-        #     "mcp500-2",
-        #     "mcp500-3",
-        #     "mcp500-4",
-        #     "theta1",
-        #     "theta2",
-        #     "theta3",
-        #     # "theta4",
-        #     # "theta5",
-        #     # "theta6",
-        # ],
         default=[
-            "theta1",
-            "theta2",
+            #     # "gpp100",
+            #     # "gpp124-1",
+            #     # "gpp124-2",
+            #     # "gpp124-3",
+            #     # "gpp124-4",
+            "gpp250-1",
+            "gpp250-2",
+            "gpp250-3",
+            "gpp250-4",
+            "gpp500-1",
+            "gpp500-2",
+            "gpp500-3",
+            "gpp500-4",
+            #     # "mcp100",
+            #     # "mcp124-1",
+            #     # "mcp124-2",
+            #     # "mcp124-3",
+            #     # "mcp124-4",
+            "mcp250-1",
+            "mcp250-2",
+            "mcp250-3",
+            "mcp250-4",
+            "mcp500-1",
+            "mcp500-2",
+            "mcp500-3",
+            "mcp500-4",
+            #     "theta1",
+            #     "theta2",
+            #     "theta3",
+            #     # "theta4",
+            #     # "theta5",
+            #     # "theta6",
         ],
     )
     parser.add_argument(
@@ -115,7 +108,6 @@ def main() -> None:
 
     base_config = config_module.Config()
     base_config.solver = "subgradient_projection"
-    base_config.time_limit = 120
     config_module.parse_args(base_config, args)
 
     logging_helper.setup()
@@ -124,10 +116,8 @@ def main() -> None:
     logger.info(f"step sizes: {args.step_sizes}")
 
     def setup_filter(setup):
-        if setup.n_cuts == 0:
+        if setup.n_linear_cuts == 0:
             if setup.eigen_comb_cut == 0:
-                return False
-            if setup.cut_type == "lmi":
                 return False
         return True
 
@@ -140,20 +130,10 @@ def main() -> None:
             [1e-2, 1e-3],
             "step_size",
             args.step_sizes,
-            "cut_type",
-            ["linear"],
-            "n_cuts",
+            "n_linear_cuts",
             [0, 1],
             "eigen_comb_cut",
             [0, 1],
-            "memory",
-            [20],
-            "projection_after_feasibility_step",
-            [0],
-            "projection_after_optimality_step",
-            [1],
-            "solver_interface",
-            ["gurobi"],
         )
     )
     setups = list(filter(setup_filter, setups))
@@ -218,18 +198,8 @@ def summary(results):
 
 def update_config(base_config, setup):
     config = config_module.copy(base_config)
-    config.initial_cut_type = "none"
-    config.eval_lb_every = 0
     for key, value in setup._asdict().items():
-        if key in ["cut_type", "n_cuts"]:
-            continue
         setattr(config, key, value)
-    if setup.cut_type == "lmi":
-        config.n_linear_cuts = 0
-        config.n_lmi_cuts = setup.n_cuts
-    elif setup.cut_type == "linear":
-        config.n_linear_cuts = setup.n_cuts
-        config.n_lmi_cuts = 0
     return config
 
 

@@ -19,7 +19,7 @@ class Config(config_utils.BaseConfig):
         self.problem_name: str = ""
         self.solver: str = ""
 
-        # Used in Mosek
+        # Currently only used in Mosek
         self.n_threads: int = 1
 
         # Suboptimality tolerance. See 'termination_criteria'.
@@ -32,7 +32,7 @@ class Config(config_utils.BaseConfig):
         self.termination_criteria: str = "solution"
 
         # Time limit
-        self.time_limit: float = 0
+        self.time_limit: float = 1200
 
         # Iteration limit
         self.iteration_limit: float = 0
@@ -51,13 +51,13 @@ class Config(config_utils.BaseConfig):
         self.projection_after_feasibility_step: int = 1
         self.projection_after_optimality_step: int = 1
 
-        self.memory: int = -1
+        self.memory: int = 20
         self.cut_deletion_criterion: str = "activity"
 
         self.duplicate_cut_check: int = 1
 
         # Type of initial cuts. {'lmi', 'linear', 'none'}
-        self.initial_cut_type: str = "lmi"
+        self.initial_cut_type: str = "none"
 
         # Number of cuts corresponding to negative eigenvalues added to RMP.
         self.n_linear_cuts: int = 1
@@ -72,13 +72,7 @@ class Config(config_utils.BaseConfig):
 
         self.eigen_comb_cut: int = 1
 
-        self.eval_lb_every: int = 1
-
-        self.switch_to_cg_patience: int = -1
-
-        self.use_dual_to_check_active_cut: int = 0
-
-        self.log_eigenvectors: int = 0
+        self.eval_lb_every: int = 0
 
         # Used in Mosek
         self.log_to_stdout: int = 0
