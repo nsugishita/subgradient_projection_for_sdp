@@ -18,7 +18,7 @@ from cpsdppy.sdp_solvers import subgradient_projection
 
 logger = logging.getLogger(__name__)
 
-version = "v5"
+version = "v6"
 tmp_dir = f"tmp/sdpa/{version}/cache"
 
 

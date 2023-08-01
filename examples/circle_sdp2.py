@@ -84,6 +84,8 @@ import cpsdppy
 
 # import shutil
 
+plt.rcParams.update({"text.usetex": True, "font.family": "Helvetica"})
+
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +109,9 @@ def main():
     config.eigen_comb_cut = 1
     config.tol = 1e-6
     config.feas_tol = 1e-6
+    config.add_cuts_after_optimality_step = 0
+    config.eigen_comb_cut = 0
+
     problem_data = get_problem_data(problem_name)
     problem_data["target_objective"] = cpsdppy.sdp_solvers.mosek_solver.run(
         problem_data, config
@@ -128,7 +133,7 @@ def main():
 
     fig, ax = plt.subplots()
     ax.axis("equal")
-    box_color = "lightgray"
+    box_color = "none"
     ax.axhline(-2, lw=1, color=box_color)
     ax.axhline(2, lw=1, color=box_color)
     ax.axvline(-2, lw=1, color=box_color)
@@ -152,6 +157,14 @@ def main():
         px, py, det, levels=[0], colors=[feasible_region_color], linewidths=1
     )
 
+    os.makedirs(plot_dir, exist_ok=True)
+    figpath = f"{plot_dir}/sdp_{problem_name}.pdf"
+    # default: 6.4, 4.8
+    fig.set_size_inches(3.2, 2.4)
+    fig.savefig(figpath, dpi=300, transparent=True)
+    fig.savefig(figpath.replace("pdf", "png"), dpi=300)
+    print(figpath)
+
     for i, x in enumerate(x_list):
         ax.plot(x[0], x[1], "o", color="C0", markersize=3)
 
@@ -159,22 +172,31 @@ def main():
         ax.plot(x[0], x[1], "o", color="C1", markersize=3)
 
     def draw_arrow(start, end, margin):
-        _start = (1 - margin) * start + margin * end
-        _end = margin * start + (1 - margin) * end
-        _len = _end - _start
-        ax.arrow(
-            _start[0],
-            _start[1],
-            _len[0],
-            _len[1],
-            color="gray",
-            width=0.0001,
-            head_width=0.02,
+        ax.plot(
+            [start[0], end[0]],
+            [start[1], end[1]],
+            color="dimgray",
+            lw=0.2,
+            zorder=1,
         )
+        # _start = (1 - margin) * start + margin * end
+        # _end = margin * start + (1 - margin) * end
+        # _len = _end - _start
+        # ax.arrow(
+        #     _start[0],
+        #     _start[1],
+        #     _len[0],
+        #     _len[1],
+        #     color="gray",
+        #     width=0.0001,
+        #     head_width=0.02,
+        # )
 
     for i in range(len(v_list)):
         draw_arrow(start=x_list[i], end=v_list[i], margin=0.05)
         draw_arrow(start=v_list[i], end=x_list[i + 1], margin=0.05)
+
+    label_dict = {1: "min", 2: "comb"}
 
     for i in range(cut_coef.shape[0]):
         g = cut_coef[i]
@@ -184,15 +206,25 @@ def main():
             point = (0, offset / g[1])
         else:
             point = (offset / g[0], 0)
+        ls = "-" if cut_data[i] == 1 else "--"
+        if cut_data[i] in label_dict:
+            label = label_dict[cut_data[i]]
+            del label_dict[cut_data[i]]
+        else:
+            label = None
         ax.axline(
             point,
             slope=-g[0] / g[1],
-            color=f"C{cut_data[i] - 1}",
+            ls=ls,
+            color="gray",
             lw=0.5,
             zorder=0,
+            label=label,
         )
 
-    os.makedirs("tmp", exist_ok=True)
+    # ax.legend(loc="upper center")
+
+    os.makedirs(plot_dir, exist_ok=True)
     figpath = f"{plot_dir}/sdp_linear_cut_{problem_name}.pdf"
     fig.savefig(figpath, dpi=300, transparent=True)
     fig.savefig(figpath.replace("pdf", "png"), dpi=300)
@@ -307,11 +339,13 @@ def get_problem_data(problem_name):
         objective_coef = np.array([0.0, 1.0])
         rng = np.random.RandomState(0)
         n = 10
-        a = rng.normal(size=(n, n)) / np.sqrt(n)
+        # a = rng.normal(size=(n, n)) / np.sqrt(n)
+        a = rng.normal(size=(n, n)) / n
         for i in range(n):
             for j in range(i, n):
                 a[i, j] = a[j, i]
-        b = rng.normal(size=(n, n)) / np.sqrt(n)
+        # b = rng.normal(size=(n, n)) / np.sqrt(n)
+        b = rng.normal(size=(n, n)) / n
         for i in range(n):
             for j in range(i, n):
                 b[i, j] = b[j, i]

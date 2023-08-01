@@ -41,7 +41,7 @@ class Config(config_utils.BaseConfig):
         self.log_every: int = 1
 
         # Parameter to control the regularization strength
-        self.step_size: float = 1e-3
+        self.step_size: float = 1.0
 
         self.solver_interface: str = "gurobi"
 
@@ -50,6 +50,8 @@ class Config(config_utils.BaseConfig):
 
         self.projection_after_feasibility_step: int = 1
         self.projection_after_optimality_step: int = 1
+
+        self.add_cuts_after_optimality_step: int = 1
 
         self.memory: int = 20
         self.cut_deletion_criterion: str = "activity"
@@ -119,7 +121,7 @@ def parse_args(
     >>> args = parser.parse_args(['--foo', '10', '--step-size', '2e-1'])
     >>> parse_args(config, args)
     >>> config._display_non_default()
-    step_size : 0.001 -> 0.2
+    step_size : 1.0 -> 0.2
 
     Parameters
     ----------

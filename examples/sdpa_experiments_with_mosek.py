@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # TODO Print time, hostcomputer etc at the beginning.
 # TODO Simplify Config.
 
-version = "v4"
+version = "v5"
 tmp_dir = f"tmp/sdpa/{version}/cache"
 
 
@@ -113,7 +113,7 @@ def main() -> None:
 
     base_config = config_module.Config()
     base_config.solver = "mosek"
-    base_config.time_limit = 120
+    base_config.time_limit = 3600
     base_config.log_to_logger = 1
     config_module.parse_args(base_config, args)
 

@@ -212,11 +212,28 @@ def run(problem_data, config):
             best_ub = min(ub, best_ub)
 
         # TODO Add cuts from all the constraints.
-        if config.eval_lb_every > 0:
+        if config.add_cuts_after_optimality_step:
+            if config.eval_lb_every > 0:
+                common.add_cuts(
+                    config=config,
+                    linear_cuts=unreg_linear_cuts,
+                    lmi_cuts=unreg_lmi_cuts,
+                    constr_svec_coef=constr_svec_coefs[
+                        most_violated_constr_index
+                    ],
+                    constr_svec_offset=constr_svec_offset[
+                        most_violated_constr_index
+                    ],
+                    x=x,
+                    w=eval_v.eigenvalues[most_violated_constr_index],
+                    v=eval_v.eigenvectors[most_violated_constr_index],
+                    n_linear_cuts=n_unreg_linear_cuts,
+                    n_lmi_cuts=n_unreg_lmi_cuts,
+                )
             common.add_cuts(
                 config=config,
-                linear_cuts=unreg_linear_cuts,
-                lmi_cuts=unreg_lmi_cuts,
+                linear_cuts=reg_linear_cuts,
+                lmi_cuts=reg_lmi_cuts,
                 constr_svec_coef=constr_svec_coefs[most_violated_constr_index],
                 constr_svec_offset=constr_svec_offset[
                     most_violated_constr_index
@@ -224,21 +241,9 @@ def run(problem_data, config):
                 x=x,
                 w=eval_v.eigenvalues[most_violated_constr_index],
                 v=eval_v.eigenvectors[most_violated_constr_index],
-                n_linear_cuts=n_unreg_linear_cuts,
-                n_lmi_cuts=n_unreg_lmi_cuts,
+                n_linear_cuts=n_reg_linear_cuts,
+                n_lmi_cuts=n_reg_lmi_cuts,
             )
-        common.add_cuts(
-            config=config,
-            linear_cuts=reg_linear_cuts,
-            lmi_cuts=reg_lmi_cuts,
-            constr_svec_coef=constr_svec_coefs[most_violated_constr_index],
-            constr_svec_offset=constr_svec_offset[most_violated_constr_index],
-            x=x,
-            w=eval_v.eigenvalues[most_violated_constr_index],
-            v=eval_v.eigenvectors[most_violated_constr_index],
-            n_linear_cuts=n_reg_linear_cuts,
-            n_lmi_cuts=n_reg_lmi_cuts,
-        )
 
         step_size_manager.feed(
             x=x,

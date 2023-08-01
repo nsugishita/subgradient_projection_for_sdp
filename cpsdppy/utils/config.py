@@ -280,7 +280,7 @@ class BaseConfig(object):
         >>> args = parser.parse_args(['--foo', '10', '--step-size', '2e-1'])
         >>> config._parse_args(args)
         >>> config._display_non_default()
-        step_size : 0.001 -> 0.2
+        step_size : 1.0 -> 0.2
 
         Parameters
         ----------
@@ -341,6 +341,8 @@ class BaseConfig(object):
 
             for i in range(min_length, len(key)):
                 shortened = key[: i + 1]
+                if shortened.endswith("_"):
+                    continue
                 status = True
                 for k in keys:
                     if k == key:
@@ -524,7 +526,7 @@ class DemoConfig(BaseConfig):
         self.iteration_limit: float = 0
 
         # Parameter to control the regularization strength
-        self.step_size: float = 1e-3
+        self.step_size: float = 1.0
 
 
 def copy(config, **kwargs):
