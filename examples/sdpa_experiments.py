@@ -155,7 +155,7 @@ def main() -> None:
                 "step_size",
                 args.step_sizes,
                 "n_linear_cuts",
-                [1],
+                [0],
                 "eigen_comb_cut",
                 [1],
             )
