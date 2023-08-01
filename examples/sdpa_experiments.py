@@ -59,11 +59,11 @@ def main() -> None:
         type=str,
         nargs="+",
         default=[
-            #     # "gpp100",
-            #     # "gpp124-1",
-            #     # "gpp124-2",
-            #     # "gpp124-3",
-            #     # "gpp124-4",
+            # "gpp100",
+            # "gpp124-1",
+            # "gpp124-2",
+            # "gpp124-3",
+            # "gpp124-4",
             "gpp250-1",
             "gpp250-2",
             "gpp250-3",
@@ -72,11 +72,11 @@ def main() -> None:
             "gpp500-2",
             "gpp500-3",
             "gpp500-4",
-            #     # "mcp100",
-            #     # "mcp124-1",
-            #     # "mcp124-2",
-            #     # "mcp124-3",
-            #     # "mcp124-4",
+            # "mcp100",
+            # "mcp124-1",
+            # "mcp124-2",
+            # "mcp124-3",
+            # "mcp124-4",
             "mcp250-1",
             "mcp250-2",
             "mcp250-3",
@@ -85,12 +85,12 @@ def main() -> None:
             "mcp500-2",
             "mcp500-3",
             "mcp500-4",
-            #     "theta1",
-            #     "theta2",
-            #     "theta3",
-            #     # "theta4",
-            #     # "theta5",
-            #     # "theta6",
+            # "theta1",
+            # "theta2",
+            # "theta3",
+            # "theta4",
+            # "theta5",
+            # "theta6",
         ],
     )
     parser.add_argument(
@@ -103,8 +103,15 @@ def main() -> None:
         "--disable-cache",
         action="store_true",
     )
+    parser.add_argument(
+        "--smoke-test",
+        action="store_true",
+    )
     config_module.add_arguments(parser)
     args = parser.parse_args()
+
+    if args.smoke_test:
+        args.disable_cache = True
 
     base_config = config_module.Config()
     base_config.solver = "subgradient_projection"
@@ -121,21 +128,38 @@ def main() -> None:
                 return False
         return True
 
-    setups = list(
-        namedtuples_from_product(
-            "setup",
-            "problem_name",
-            args.problem_names,
-            "tol",
-            [1e-2, 1e-3],
-            "step_size",
-            args.step_sizes,
-            "n_linear_cuts",
-            [0, 1],
-            "eigen_comb_cut",
-            [0, 1],
+    if not args.smoke_test:
+        setups = list(
+            namedtuples_from_product(
+                "setup",
+                "problem_name",
+                args.problem_names,
+                "tol",
+                [1e-2, 1e-3],
+                "step_size",
+                args.step_sizes,
+                "n_linear_cuts",
+                [0, 1],
+                "eigen_comb_cut",
+                [0, 1],
+            )
         )
-    )
+    else:
+        setups = list(
+            namedtuples_from_product(
+                "setup",
+                "problem_name",
+                args.problem_names,
+                "tol",
+                [1e-3],
+                "step_size",
+                args.step_sizes,
+                "n_linear_cuts",
+                [1],
+                "eigen_comb_cut",
+                [1],
+            )
+        )
     setups = list(filter(setup_filter, setups))
 
     results: list = []
