@@ -95,28 +95,54 @@ plot_dir = "tmp/circle_sdp/v2"
 #     shutil.rmtree(plot_dir)
 os.makedirs(plot_dir, exist_ok=True)
 
-grid_size = 300
+grid_size = 30
+
+setup = 1
 
 
 def main():
     problem_name = "e"
     cpsdppy.logging_helper.setup()
     config = cpsdppy.config.Config()
-    config.initial_cut_type = "none"
-    config.eval_lb_every = 0
-    config.iteration_limit = 3
-    config.step_size = 5.0
-    config.eigen_comb_cut = 1
-    config.tol = 1e-6
-    config.feas_tol = 1e-6
-    config.add_cuts_after_optimality_step = 0
-    config.eigen_comb_cut = 0
+
+    if setup == 1:
+        config.eval_lb_every = 0
+        config.iteration_limit = 3
+        config.step_size = 5.0
+        config.tol = 1e-6
+        config.feas_tol = 1e-6
+        config.add_cuts_after_optimality_step = 0
+        config.n_linear_cuts = 1
+        config.eigen_comb_cut = 1
+        initial_x = [-4, 2]
+    elif setup == 2:
+        config.eval_lb_every = 0
+        config.iteration_limit = 3
+        config.step_size = 2.0
+        config.tol = 1e-6
+        config.feas_tol = 1e-6
+        config.add_cuts_after_optimality_step = 0
+        config.n_linear_cuts = 1
+        config.eigen_comb_cut = 0
+        initial_x = [0, -1]
+    elif setup == 3:
+        config.eval_lb_every = 0
+        config.iteration_limit = 3
+        config.step_size = 2.0
+        config.tol = 1e-6
+        config.feas_tol = 1e-6
+        config.add_cuts_after_optimality_step = 0
+        config.n_linear_cuts = 1
+        config.eigen_comb_cut = 0
+        initial_x = [-3, -3]
+    else:
+        raise ValueError
 
     problem_data = get_problem_data(problem_name)
     problem_data["target_objective"] = cpsdppy.sdp_solvers.mosek_solver.run(
         problem_data, config
     )["primal_objective"]
-    problem_data["initial_x"] = -2
+    problem_data["initial_x"] = np.array(initial_x)
     result = cpsdppy.sdp_solvers.subgradient_projection.run(
         problem_data, config
     )
@@ -134,10 +160,21 @@ def main():
     fig, ax = plt.subplots()
     ax.axis("equal")
     box_color = "none"
-    ax.axhline(-2, lw=1, color=box_color)
-    ax.axhline(2, lw=1, color=box_color)
-    ax.axvline(-2, lw=1, color=box_color)
-    ax.axvline(2, lw=1, color=box_color)
+    if setup == 1:
+        ax.axhline(-3, lw=1, color=box_color)
+        ax.axhline(3, lw=1, color=box_color)
+        ax.axvline(-3, lw=1, color=box_color)
+        ax.axvline(3, lw=1, color=box_color)
+    elif setup == 2:
+        ax.axhline(-3, lw=1, color=box_color)
+        ax.axhline(3, lw=1, color=box_color)
+        ax.axvline(-3, lw=1, color=box_color)
+        ax.axvline(3, lw=1, color=box_color)
+    elif setup == 3:
+        ax.axhline(-5, lw=1, color=box_color)
+        ax.axhline(4, lw=1, color=box_color)
+        ax.axvline(-4, lw=1, color=box_color)
+        ax.axvline(4, lw=1, color=box_color)
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
@@ -166,31 +203,38 @@ def main():
     print(figpath)
 
     for i, x in enumerate(x_list):
-        ax.plot(x[0], x[1], "o", color="C0", markersize=3)
+        ax.scatter(
+            x[0],
+            x[1],
+            s=3,
+            marker="o",
+            edgecolors="gray",
+            c="gray",
+            linewidths=0.4,
+            zorder=99,
+        )
 
     for i, x in enumerate(v_list):
-        ax.plot(x[0], x[1], "o", color="C1", markersize=3)
+        ax.scatter(
+            x[0],
+            x[1],
+            s=3,
+            marker="o",
+            edgecolors="gray",
+            c="white",
+            linewidths=0.4,
+            zorder=99,
+        )
 
     def draw_arrow(start, end, margin):
         ax.plot(
             [start[0], end[0]],
             [start[1], end[1]],
             color="dimgray",
+            ls=(0, (5, 5)),
             lw=0.2,
             zorder=1,
         )
-        # _start = (1 - margin) * start + margin * end
-        # _end = margin * start + (1 - margin) * end
-        # _len = _end - _start
-        # ax.arrow(
-        #     _start[0],
-        #     _start[1],
-        #     _len[0],
-        #     _len[1],
-        #     color="gray",
-        #     width=0.0001,
-        #     head_width=0.02,
-        # )
 
     for i in range(len(v_list)):
         draw_arrow(start=x_list[i], end=v_list[i], margin=0.05)
@@ -223,6 +267,74 @@ def main():
         )
 
     # ax.legend(loc="upper center")
+
+    if setup == 1:
+        x_offsets = [
+            [0.0, 0.4],
+            [-0.4, 0.0],
+            [0.1, 0.4],
+            [-0.1, 0.4],
+        ]
+        x_box = [False, False, False, False]
+        v_offsets = [
+            [0.4, 0.0],
+            [0.4, 0.15],
+            [0.15, -0.3],
+        ]
+        v_box = [False, False, True]
+    elif setup == 2:
+        x_offsets = [
+            [0.0, 0.4],
+            [-0.4, 0.0],
+            [0.1, 0.4],
+            [-0.1, 0.4],
+        ]
+        x_box = [False, False, False, False]
+        v_offsets = [
+            [0.4, 0.0],
+            [0.4, 0.15],
+            [0.15, -0.3],
+        ]
+        v_box = [False, False, True]
+    elif setup == 3:
+        x_offsets = [
+            [0.0, 0.6],
+            [-0.6, 0.6],
+            [0.8, -0.2],
+            [0.8, 0.0],
+        ]
+        x_box = [False, False, False, False]
+        v_offsets = [
+            [-0.4, -0.4],
+            [0.5, -0.5],
+            [0.8, 0.1],
+        ]
+        v_box = [False, False, True]
+    else:
+        raise ValueError
+    bbox = dict(boxstyle="square,pad=0.00", ec="none", fc="white", alpha=0.8)
+
+    for i in range(len(x_list)):
+        ax.text(
+            x_list[i][0] + x_offsets[i][0],
+            x_list[i][1] + x_offsets[i][1],
+            f"$x_{i}$",
+            va="center",
+            ha="center",
+            bbox=bbox if x_box[i] else None,
+        )
+    for i in range(len(v_list)):
+        ax.text(
+            v_list[i][0] + v_offsets[i][0],
+            v_list[i][1] + v_offsets[i][1],
+            f"$y_{i}$",
+            va="center",
+            ha="center",
+            bbox=bbox if v_box[i] else None,
+        )
+
+    ax.set_xticks([])
+    ax.set_yticks([])
 
     os.makedirs(plot_dir, exist_ok=True)
     figpath = f"{plot_dir}/sdp_linear_cut_{problem_name}.pdf"
@@ -337,8 +449,17 @@ def get_problem_data(problem_name):
 
     elif problem_name == "e":
         objective_coef = np.array([0.0, 1.0])
-        rng = np.random.RandomState(0)
-        n = 10
+        if setup == 1:
+            rng = np.random.RandomState(0)
+            n = 10
+        elif setup == 2:
+            rng = np.random.RandomState(0)
+            n = 3
+        elif setup == 3:
+            rng = np.random.RandomState(1)
+            n = 3
+        else:
+            raise ValueError
         # a = rng.normal(size=(n, n)) / np.sqrt(n)
         a = rng.normal(size=(n, n)) / n
         for i in range(n):
