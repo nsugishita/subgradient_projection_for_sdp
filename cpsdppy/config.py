@@ -43,6 +43,9 @@ class Config(config_utils.BaseConfig):
         # Parameter to control the regularization strength
         self.step_size: float = 1.0
 
+        self.step_size_manager_shift: float = 0.0
+        self.step_size_manager_scale: float = 1.2
+
         self.solver_interface: str = "gurobi"
 
         # Method to solve RMP model

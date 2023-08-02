@@ -408,9 +408,7 @@ def run(problem_data, config):
 class StepSizeManager:
     def __init__(self, config):
         self.config = config
-        self.shift = 0
-        self.scale = 1.2
-        self.step_size_factor = 1
+        self.step_size_factor = 1.0
         self.fx = np.array([])
         self.gx = np.array([])
         self.fv = np.array([])
@@ -421,6 +419,9 @@ class StepSizeManager:
         return self.config.step_size * self.step_size_factor
 
     def feed(self, x, fx, gx, v, fv, gv):
+        shift = self.config.step_size_manager_shift
+        scale = self.config.step_size_manager_scale
+
         self.fx = np.r_[self.fx, fx]
         self.gx = np.r_[self.gx, np.max(gx)]
         self.fv = np.r_[self.fv, fv]
@@ -448,11 +449,11 @@ class StepSizeManager:
 
         if iter >= warmup:
             if step_size_adjustament == "increase":
-                self.step_size_factor += self.shift
-                self.step_size_factor *= self.scale
+                self.step_size_factor += shift
+                self.step_size_factor *= scale
             elif step_size_adjustament == "decrease":
-                self.step_size_factor -= self.shift
-                self.step_size_factor /= self.scale
+                self.step_size_factor -= shift
+                self.step_size_factor /= scale
 
 
 # vimquickrun: . ./scripts/activate.sh ; python %
