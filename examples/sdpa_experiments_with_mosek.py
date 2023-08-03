@@ -99,7 +99,7 @@ def main() -> None:
         for solver in args.solver:
             for tol in args.tol:
                 command = (
-                    "python examples/solve_sdpa_with_mosek.py "
+                    "python examples/solve_sdpa.py "
                     f"--dir {result_dir} "
                     f"--problem-name {problem_name} "
                     f"--solver {solver} "
