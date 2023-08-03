@@ -4,7 +4,10 @@
 
 import argparse
 import logging
+import os
 import subprocess
+
+import pandas as pd
 
 from cpsdppy import logging_helper
 
@@ -12,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 version = "vdev"
-result_dir = f"tmp/sdpa/{version}/cache"
+result_dir = f"tmp/sdpa/{version}/cache/result"
+returncode_file = f"{result_dir}/returncode.csv"
 
 
 def main() -> None:
@@ -24,6 +28,7 @@ def main() -> None:
         nargs="+",
         default=[
             "theta1",
+            "theta2",
             "theta3",
             # "gpp100",
             # "gpp124-1",
@@ -72,6 +77,13 @@ def main() -> None:
 
     logging_helper.setup()
 
+    if os.path.exists(returncode_file):
+        df = pd.read_csv(returncode_file)
+    else:
+        df = pd.DataFrame(columns=["problem", "tol", "returncode"])
+
+    df = df.set_index(["problem", "tol"])
+
     for problem_name in args.problem_names:
         for tol in args.tol:
             command = (
@@ -79,17 +91,23 @@ def main() -> None:
                 f"--dir {result_dir} "
                 f"--problem-name {problem_name} --tol {tol}"
             )
-            logger.info("- " * 20)
+            logger.info("- " * 30)
             logger.info(f"problem: {problem_name}  tol: {tol:.1e}")
             logger.info(f"command: {command}")
-            logger.info("- " * 20)
+            logger.info("- " * 30)
 
             ret = subprocess.run(command, shell=True)
-            logger.info("= " * 20)
-            logger.info(f"problem: {problem_name}  tol: {tol:.1e}")
-            logger.info(f"command: {command}")
-            logger.info(f"returncode: {ret.returncode}")
-            logger.info("= " * 20)
+
+            logger.info("= " * 30)
+            logger.info(
+                f"problem: {problem_name}  tol: {tol:.1e}  "
+                f"returncode: {ret.returncode}"
+            )
+            logger.info("= " * 30)
+
+            df.loc[(problem_name, tol), :] = ret.returncode
+
+            df.to_csv(returncode_file)
 
 
 if __name__ == "__main__":

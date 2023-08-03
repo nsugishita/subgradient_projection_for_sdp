@@ -16,12 +16,8 @@ logger = logging.getLogger(__name__)
 
 def run(problem_data, config, dir, disable_cache=False):
     assert config.solver in ["mosek"]
-    cache_path = (
-        f"{dir}/data/{config._asstr(only_modified=True, shorten=True)}.pkl"
-    )
-    log_path = (
-        f"{dir}/data/{config._asstr(only_modified=True, shorten=True)}.txt"
-    )
+    cache_path = f"{dir}/{config._asstr(only_modified=True, shorten=True)}.pkl"
+    log_path = f"{dir}/{config._asstr(only_modified=True, shorten=True)}.txt"
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
     logger.info("result are saved in:")
     logger.info(cache_path)
