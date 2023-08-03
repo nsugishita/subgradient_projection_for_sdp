@@ -6,49 +6,18 @@ import argparse
 import collections
 import itertools
 import logging
-import os
-import pickle
 
 import numpy as np
 import pandas as pd
 
 from cpsdppy import config as config_module
-from cpsdppy import logging_helper, sdpa
-from cpsdppy.sdp_solvers import subgradient_projection
+from cpsdppy import logging_helper
+from examples import solve_sdpa
 
 logger = logging.getLogger(__name__)
 
-version = "v6"
-tmp_dir = f"tmp/sdpa/{version}/cache"
-
-
-def run(problem_data, config, disable_cache):
-    assert config.solver in ["subgradient_projection"]
-    cache_path = (
-        f"{tmp_dir}/data/{config._asstr(only_modified=True, shorten=True)}.pkl"
-    )
-    log_path = (
-        f"{tmp_dir}/data/{config._asstr(only_modified=True, shorten=True)}.txt"
-    )
-    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-    logger.info("result are saved in:")
-    logger.info(cache_path)
-    logger.info("log messages are saved in:")
-    logger.info(log_path)
-    if os.path.exists(cache_path) and (not disable_cache):
-        with open(cache_path, "rb") as f:
-            return pickle.load(f)
-
-    with logging_helper.save_log(log_path):
-        if config.solver == "subgradient_projection":
-            res = subgradient_projection.run(problem_data, config)
-        else:
-            raise ValueError(f"unknown solver '{config.solver}'")
-
-    if not disable_cache:
-        with open(cache_path, "wb") as f:
-            pickle.dump(res, f)
-    return res
+version = "vdev"
+result_dir = f"tmp/sdpa/{version}/result"
 
 
 def main() -> None:
@@ -170,13 +139,9 @@ def main() -> None:
         logger.info("- " * 20)
 
         config = update_config(base_config, setup)
-        problem_data = sdpa.read(config)
 
         results.append(
-            (
-                config._astuple(shorten=True),
-                run(problem_data, config, args.disable_cache),
-            )
+            (config._astuple(shorten=True), solve_sdpa.run(config, result_dir))
         )
 
         summary(results)
@@ -214,10 +179,10 @@ def summary(results):
     df["walltime"] = np.round(df["walltime"].values, 2)
     with pd.option_context("display.max_rows", 999):
         print(df)
-        with open(f"{tmp_dir}/summary.txt", "w") as f:
+        with open(f"{result_dir}/summary.txt", "w") as f:
             f.write(df.to_string())
             f.write("\n")
-    df.to_csv(f"{tmp_dir}/summary.csv")
+    df.to_csv(f"{result_dir}/summary.csv")
 
 
 def update_config(base_config, setup):
