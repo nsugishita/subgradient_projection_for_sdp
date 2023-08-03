@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 version = "vdev"
-result_dir = f"tmp/sdpa/{version}/cache/result"
+result_dir = f"tmp/sdpa/{version}/result"
 returncode_file = f"{result_dir}/returncode.csv"
 
 
@@ -23,13 +23,13 @@ def main() -> None:
     """Run the main routine of this script"""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--problem-names",
+        "--problem-name",
         type=str,
         nargs="+",
         default=[
             "theta1",
             "theta2",
-            "theta3",
+            # "theta3",
             # "gpp100",
             # "gpp124-1",
             # "gpp124-2",
@@ -65,6 +65,15 @@ def main() -> None:
         ],
     )
     parser.add_argument(
+        "--solver",
+        type=str,
+        nargs="+",
+        default=[
+            "subgradient_projection",
+            "mosek",
+        ],
+    )
+    parser.add_argument(
         "--tol",
         type=float,
         nargs="+",
@@ -78,36 +87,54 @@ def main() -> None:
     logging_helper.setup()
 
     if os.path.exists(returncode_file):
-        df = pd.read_csv(returncode_file)
+        returncode_df = pd.read_csv(returncode_file)
     else:
-        df = pd.DataFrame(columns=["problem", "tol", "returncode"])
+        returncode_df = pd.DataFrame(
+            columns=["problem", "solver", "tol", "returncode"]
+        )
 
-    df = df.set_index(["problem", "tol"])
+    returncode_df = returncode_df.set_index(["problem", "solver", "tol"])
 
-    for problem_name in args.problem_names:
-        for tol in args.tol:
-            command = (
-                "python examples/solve_sdpa_with_mosek.py "
-                f"--dir {result_dir} "
-                f"--problem-name {problem_name} --tol {tol}"
-            )
-            logger.info("- " * 30)
-            logger.info(f"problem: {problem_name}  tol: {tol:.1e}")
-            logger.info(f"command: {command}")
-            logger.info("- " * 30)
+    for problem_name in args.problem_name:
+        for solver in args.solver:
+            for tol in args.tol:
+                command = (
+                    "python examples/solve_sdpa_with_mosek.py "
+                    f"--dir {result_dir} "
+                    f"--problem-name {problem_name} "
+                    f"--solver {solver} "
+                    f"--tol {tol}"
+                )
+                logger.info("- " * 30)
+                logger.info(f"problem: {problem_name}  tol: {tol:.1e}")
+                logger.info(f"command: {command}")
+                logger.info("- " * 30)
 
-            ret = subprocess.run(command, shell=True)
+                try:
+                    returncode = returncode_df.loc[
+                        (problem_name, solver, tol), "returncode"
+                    ]
+                    cached = True
+                except KeyError:
+                    cached = False
 
-            logger.info("= " * 30)
-            logger.info(
-                f"problem: {problem_name}  tol: {tol:.1e}  "
-                f"returncode: {ret.returncode}"
-            )
-            logger.info("= " * 30)
+                if not cached:
+                    ret = subprocess.run(command, shell=True)
+                    returncode = ret.returncode
 
-            df.loc[(problem_name, tol), :] = ret.returncode
+                logger.info("= " * 30)
+                logger.info(
+                    f"problem: {problem_name}  tol: {tol:.1e}  "
+                    f"cached: {int(cached)}  "
+                    f"returncode: {returncode}"
+                )
+                logger.info("= " * 30)
 
-            df.to_csv(returncode_file)
+                if not cached:
+                    returncode_df.loc[
+                        (problem_name, solver, tol), :
+                    ] = returncode
+                    returncode_df.to_csv(returncode_file)
 
 
 if __name__ == "__main__":

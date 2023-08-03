@@ -9,13 +9,12 @@ import pickle
 
 from cpsdppy import config as config_module
 from cpsdppy import logging_helper, sdpa
-from cpsdppy.sdp_solvers import mosek_solver
+from cpsdppy.sdp_solvers import mosek_solver, subgradient_projection
 
 logger = logging.getLogger(__name__)
 
 
 def run(problem_data, config, dir, disable_cache=False):
-    assert config.solver in ["mosek"]
     cache_path = f"{dir}/{config._asstr(only_modified=True, shorten=True)}.pkl"
     log_path = f"{dir}/{config._asstr(only_modified=True, shorten=True)}.txt"
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
@@ -24,11 +23,14 @@ def run(problem_data, config, dir, disable_cache=False):
     logger.info("log messages are saved in:")
     logger.info(log_path)
     if os.path.exists(cache_path) and (not disable_cache):
+        logger.info("cache found")
         with open(cache_path, "rb") as f:
             return pickle.load(f)
 
     with logging_helper.save_log(log_path):
-        if config.solver == "mosek":
+        if config.solver == "subgradient_projection":
+            res = subgradient_projection.run(problem_data, config)
+        elif config.solver == "mosek":
             res = mosek_solver.run(problem_data, config)
         else:
             raise ValueError(f"unknown solver '{config.solver}'")
@@ -55,11 +57,12 @@ def main() -> None:
     args = parser.parse_args()
 
     config = config_module.Config()
-    config.solver = "mosek"
     config._parse_args()
 
     if not config.problem_name:
         raise ValueError("--problem-name is required")
+    if not config.solver:
+        raise ValueError("--solver is required")
 
     logging_helper.setup()
 
