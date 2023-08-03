@@ -138,7 +138,7 @@ def main() -> None:
         logger.info(str(setup))
         logger.info("- " * 20)
 
-        config = update_config(base_config, setup)
+        config = base_config._update_from_dict(setup._asdict())
 
         results.append(
             (config._astuple(shorten=True), solve_sdpa.run(config, result_dir))
@@ -183,13 +183,6 @@ def summary(results):
             f.write(df.to_string())
             f.write("\n")
     df.to_csv(f"{result_dir}/summary.csv")
-
-
-def update_config(base_config, setup):
-    config = config_module.copy(base_config)
-    for key, value in setup._asdict().items():
-        setattr(config, key, value)
-    return config
 
 
 def namedtuples_from_product(name, *args):

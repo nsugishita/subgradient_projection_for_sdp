@@ -14,7 +14,7 @@ from cpsdppy.sdp_solvers import mosek_solver, subgradient_projection
 logger = logging.getLogger(__name__)
 
 
-def run(problem_data, config, dir, disable_cache=False):
+def run(config, dir, disable_cache=False):
     cache_path = f"{dir}/{config._asstr(only_modified=True, shorten=True)}.pkl"
     log_path = f"{dir}/{config._asstr(only_modified=True, shorten=True)}.txt"
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
@@ -26,6 +26,8 @@ def run(problem_data, config, dir, disable_cache=False):
         logger.info("cache found")
         with open(cache_path, "rb") as f:
             return pickle.load(f)
+
+    problem_data = sdpa.read(config)
 
     with logging_helper.save_log(log_path):
         if config.solver == "subgradient_projection":
@@ -69,8 +71,7 @@ def main() -> None:
     logger.info(f"problem names: {config.problem_name}")
     logger.info(f"step sizes: {config.step_size}")
 
-    problem_data = sdpa.read(config)
-    run(problem_data, config, dir=args.dir, disable_cache=args.disable_cache)
+    run(config, dir=args.dir, disable_cache=args.disable_cache)
 
 
 if __name__ == "__main__":
