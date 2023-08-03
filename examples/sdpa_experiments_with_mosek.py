@@ -11,6 +11,10 @@ from cpsdppy import logging_helper
 logger = logging.getLogger(__name__)
 
 
+version = "vdev"
+result_dir = f"tmp/sdpa/{version}/cache"
+
+
 def main() -> None:
     """Run the main routine of this script"""
     parser = argparse.ArgumentParser()
@@ -19,8 +23,8 @@ def main() -> None:
         type=str,
         nargs="+",
         default=[
-            # "theta1",
-            # "theta3",
+            "theta1",
+            "theta3",
             # "gpp100",
             # "gpp124-1",
             # "gpp124-2",
@@ -72,6 +76,7 @@ def main() -> None:
         for tol in args.tol:
             command = (
                 "python examples/solve_sdpa_with_mosek.py "
+                f"--dir {result_dir} "
                 f"--problem-name {problem_name} --tol {tol}"
             )
             logger.info("- " * 20)

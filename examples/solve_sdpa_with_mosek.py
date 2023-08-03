@@ -13,17 +13,14 @@ from cpsdppy.sdp_solvers import mosek_solver
 
 logger = logging.getLogger(__name__)
 
-version = "vdev"
-tmp_dir = f"tmp/sdpa/{version}/cache"
 
-
-def run(problem_data, config, disable_cache=False):
+def run(problem_data, config, dir, disable_cache=False):
     assert config.solver in ["mosek"]
     cache_path = (
-        f"{tmp_dir}/data/{config._asstr(only_modified=True, shorten=True)}.pkl"
+        f"{dir}/data/{config._asstr(only_modified=True, shorten=True)}.pkl"
     )
     log_path = (
-        f"{tmp_dir}/data/{config._asstr(only_modified=True, shorten=True)}.txt"
+        f"{dir}/data/{config._asstr(only_modified=True, shorten=True)}.txt"
     )
     os.makedirs(os.path.dirname(cache_path), exist_ok=True)
     logger.info("result are saved in:")
@@ -50,13 +47,20 @@ def main() -> None:
     """Run the main routine of this script"""
     parser = argparse.ArgumentParser()
     config_module.add_arguments(parser)
+    parser.add_argument(
+        "--dir",
+        type=str,
+        required=True,
+    )
+    parser.add_argument(
+        "--disable-cache",
+        action="store_true",
+    )
     args = parser.parse_args()
 
     config = config_module.Config()
     config.solver = "mosek"
-    config.time_limit = 3600
-    config.log_to_logger = 1
-    config_module.parse_args(config, args)
+    config._parse_args()
 
     if not config.problem_name:
         raise ValueError("--problem-name is required")
@@ -66,10 +70,8 @@ def main() -> None:
     logger.info(f"problem names: {config.problem_name}")
     logger.info(f"step sizes: {config.step_size}")
 
-    print(config._asstr(only_modified=True, shorten=True))
-
     problem_data = sdpa.read(config)
-    run(problem_data, config)
+    run(problem_data, config, dir=args.dir, disable_cache=args.disable_cache)
 
 
 if __name__ == "__main__":

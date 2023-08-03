@@ -23,7 +23,7 @@ class Config(config_utils.BaseConfig):
         self.n_threads: int = 1
 
         # Suboptimality tolerance. See 'termination_criteria'.
-        self.tol: float = 1e-3
+        self.tol: float = 0.0
 
         self.feas_tol: float = 1e-3
 
@@ -32,7 +32,7 @@ class Config(config_utils.BaseConfig):
         self.termination_criteria: str = "solution"
 
         # Time limit
-        self.time_limit: float = 1200
+        self.time_limit: float = 3600
 
         # Iteration limit
         self.iteration_limit: float = 0
@@ -82,7 +82,7 @@ class Config(config_utils.BaseConfig):
         # Used in Mosek
         self.log_to_stdout: int = 0
         # Used in Mosek
-        self.log_to_logger: int = 0
+        self.log_to_logger: int = 1
 
 
 def add_arguments(parser, conflict="warn", _stacklevel=3):
