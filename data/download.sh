@@ -2,4 +2,34 @@
 #
 set -e
 
-git clone https://github.com/vsdp/SDPLIB
+if [[ -z "${PREFIX}" ]]; then
+  MY_PREFIX="/usr"
+else
+  MY_PREFIX="${PREFIX}"
+fi
+
+JULIA="${PREFIX}/bin/julia"
+
+if [ ! -d "SDPLIB" ]; then
+    git clone https://github.com/vsdp/SDPLIB
+    sed -i "s/eqaulG11/equalG11/" SDPLIB/README.md
+fi
+
+if [ ! -d "SDPLib_Importer" ]; then
+    git clone https://github.com/migarstka/SDPLib_Importer
+    sed -i "s/20:113/32:123/" SDPLib_Importer.jl
+    sed -i "s/split(ln\[1\])\[4\]/split(ln\[1\])\[8\]/" SDPLib_Importer.jl
+fi
+
+pushd SDPLib_Importer
+
+if [ ! -d "sdplib" ]; then
+    # Set up sdplib data directory.
+    ln -s ../SDPLIB/data/ sdplib
+    pushd ../SDPLIB/data
+    ln -s ../README.md README
+    popd
+fi
+
+$JULIA --project=env -e "import Pkg; Pkg.add([\"FileIO\", \"JLD2\"])"
+$JULIA --project=env -e "include(\"SDPLib_Importer.jl\")"
