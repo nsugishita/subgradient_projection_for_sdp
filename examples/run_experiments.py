@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
-"""Solve SDPA using column generation"""
+"""Run solvers with various configurations
+
+This runs the subgradient projection solver and MOSEK with various
+configurations and gathers the result.
+"""
 
 import argparse
 import collections
@@ -91,9 +95,9 @@ def main() -> None:
     logger.info(f"problem names: {args.problem_names}")
     logger.info(f"step sizes: {args.step_sizes}")
 
-    def setup_filter(setup):
-        if setup.n_linear_cuts == 0:
-            if setup.eigen_comb_cut == 0:
+    def config_filter(config):
+        if config.n_linear_cuts == 0:
+            if config.eigen_comb_cut == 0:
                 return False
         return True
 
@@ -129,48 +133,70 @@ def main() -> None:
                 [1],
             )
         )
-    setups = list(filter(setup_filter, setups))
 
-    results: list = []
+    setups = list(
+        namedtuples_from_product(
+            "setup",
+            "problem_name",
+            args.problem_names,
+            "solver",
+            ["mosek", "subgradient_projection"],
+            "tol",
+            [1e-2, 1e-3],
+        )
+    )
+
+    run_data: list = []
 
     for setup in setups:
+        config = base_config._update_from_dict(setup._asdict())
+        if not config_filter(config):
+            continue
+
         logger.info("- " * 20)
         logger.info(str(setup))
         logger.info("- " * 20)
 
-        config = base_config._update_from_dict(setup._asdict())
+        returncode, result = solve_sdpa.run_subprocess(config, result_dir)
+        run_data.append((config._astuple(shorten=True), returncode, result))
 
-        results.append(
-            (config._astuple(shorten=True), solve_sdpa.run(config, result_dir))
-        )
-
-        summary(results)
+        summary(run_data)
 
 
-def summary(results):
-    """Print summary of results
+def summary(run_data):
+    """Print summary
 
-    This takes a list of 2-tuple, `(configurations, results)`.
+    This takes a list of 2-tuple, `(configurations, returncode, results)`.
     `configurations` is a tuple of pairs `(configuration, value)`,
     while `resuls` is a dictionary with `walltime` and `n_iterations`.
     """
-    if len(results) <= 1:
+    if len(run_data) <= 1:
         return
-    data = tuple(
-        k
-        + (
-            ("walltime", v["walltime"]),
-            ("n_iterations", v["n_iterations"]),
+    records = []
+    for config_tuple, returncode, result in run_data:
+        if result is not None:
+            walltime = result["walltime"]
+            n_iterations = result["n_iterations"]
+        else:
+            walltime = np.nan
+            n_iterations = np.nan
+        records.append(
+            tuple(
+                config_tuple
+                + (
+                    ("returncode", returncode),
+                    ("walltime", walltime),
+                    ("n_iterations", n_iterations),
+                )
+            )
         )
-        for k, v in results
-    )
-    df = pd.DataFrame.from_records([{k: v for k, v in x} for x in data])
+    df = pd.DataFrame.from_records([{k: v for k, v in x} for x in records])
     dropped = []
-    for column in list(df.columns):
+    for column in list(df.columns[:-3]):
         if np.unique(df[column]).size == 1:
             dropped.append(column)
     df.drop(columns=dropped, inplace=True)
-    for tpls, _ in results:
+    for tpls, _, _ in run_data:
         index = [k for k, _ in tpls if k not in dropped]
         break
     df = df.set_index(index)

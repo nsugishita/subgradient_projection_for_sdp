@@ -84,6 +84,9 @@ class Config(config_utils.BaseConfig):
         # Used in Mosek
         self.log_to_logger: int = 1
 
+        # If 1, do not save any results.
+        self.dry_run: int = 0
+
 
 def add_arguments(parser, conflict="warn", _stacklevel=3):
     """Add arguments to a given ArgumentParser
