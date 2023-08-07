@@ -20,7 +20,7 @@ from examples import solve_sdpa
 
 logger = logging.getLogger(__name__)
 
-version = "vdev"
+version = "v8"
 result_dir = f"tmp/sdpa/{version}/result"
 
 
@@ -67,57 +67,18 @@ def main() -> None:
         ],
     )
     parser.add_argument(
-        "--step-sizes",
-        type=float,
-        nargs="+",
-        default=[1],
-    )
-    parser.add_argument(
-        "--disable-cache",
-        action="store_true",
-    )
-    parser.add_argument(
         "--smoke-test",
         action="store_true",
     )
     config_module.add_arguments(parser)
     args = parser.parse_args()
 
-    if args.smoke_test:
-        args.disable_cache = True
-
     base_config = config_module.Config()
-    base_config.solver = "subgradient_projection"
     config_module.parse_args(base_config, args)
 
     logging_helper.setup()
 
-    logger.info(f"problem names: {args.problem_names}")
-    logger.info(f"step sizes: {args.step_sizes}")
-
-    def config_filter(config):
-        if config.n_linear_cuts == 0:
-            if config.eigen_comb_cut == 0:
-                return False
-        return True
-
-    if not args.smoke_test:
-        setups = list(
-            namedtuples_from_product(
-                "setup",
-                "problem_name",
-                args.problem_names,
-                "tol",
-                [1e-2, 1e-3],
-                "step_size",
-                args.step_sizes,
-                "n_linear_cuts",
-                [0, 1],
-                "eigen_comb_cut",
-                [0, 1],
-            )
-        )
-    else:
+    if args.smoke_test:
         setups = list(
             namedtuples_from_product(
                 "setup",
@@ -125,29 +86,54 @@ def main() -> None:
                 args.problem_names,
                 "tol",
                 [1e-3],
-                "step_size",
-                args.step_sizes,
                 "n_linear_cuts",
                 [0],
                 "eigen_comb_cut",
                 [1],
             )
         )
+        _impl(base_config, setups)
 
-    setups = list(
-        namedtuples_from_product(
-            "setup",
-            "problem_name",
-            args.problem_names,
-            "solver",
-            ["mosek", "subgradient_projection"],
-            "tol",
-            [1e-2, 1e-3],
+    else:
+        setups = list(
+            namedtuples_from_product(
+                "setup",
+                "problem_name",
+                args.problem_names,
+                "solver",
+                ["subgradient_projection"],
+                "tol",
+                [1e-2, 1e-3],
+                "n_linear_cuts",
+                [0, 1],
+                "eigen_comb_cut",
+                [0, 1],
+            )
         )
-    )
+        _impl(base_config, setups)
+
+        setups = list(
+            namedtuples_from_product(
+                "setup",
+                "problem_name",
+                args.problem_names,
+                "solver",
+                ["mosek", "subgradient_projection"],
+                "tol",
+                [1e-2, 1e-3],
+            )
+        )
+        _impl(base_config, setups)
+
+
+def _impl(base_config, setups):
+    def config_filter(config):
+        if config.n_linear_cuts == 0:
+            if config.eigen_comb_cut == 0:
+                return False
+        return True
 
     run_data: list = []
-
     for setup in setups:
         config = base_config._update_from_dict(setup._asdict())
         if not config_filter(config):
@@ -192,7 +178,7 @@ def summary(run_data):
         )
     df = pd.DataFrame.from_records([{k: v for k, v in x} for x in records])
     dropped = []
-    for column in list(df.columns[:-3]):
+    for column in list(df.columns[:-2]):
         if np.unique(df[column]).size == 1:
             dropped.append(column)
     df.drop(columns=dropped, inplace=True)
