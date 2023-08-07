@@ -110,7 +110,7 @@ def main() -> None:
                 [0, 1],
             )
         )
-        _impl(base_config, setups)
+        # _impl(base_config, setups)   # TODO XXX
 
         setups = list(
             namedtuples_from_product(
@@ -118,7 +118,7 @@ def main() -> None:
                 "problem_name",
                 args.problem_names,
                 "solver",
-                ["mosek", "subgradient_projection"],
+                ["cosmo", "mosek", "subgradient_projection"],
                 "tol",
                 [1e-2, 1e-3],
             )

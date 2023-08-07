@@ -1,7 +1,6 @@
 using FileIO, COSMO, SparseArrays, LinearAlgebra, Test, JuMP, JSON
 
 function run_cosmo(problem_name, kwargs=Dict())
-
     data = load("./data/SDPLIB/data/$(problem_name).jld2");
     F = data["F"]
     c = data["c"]
@@ -14,7 +13,6 @@ function run_cosmo(problem_name, kwargs=Dict())
     @constraint(model, con1,  Symmetric(-Matrix(F[1]) + sum(Matrix(F[k + 1]) .* x[k] for k in 1:m))  in JuMP.PSDCone());
     JuMP.optimize!(model);
     return model;
-
 end
 
 function run_experiments()
