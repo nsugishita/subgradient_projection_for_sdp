@@ -1,5 +1,12 @@
 #!/bin/sh
 #
+# Set up data files to run COSMO.
+#
+# This must be run after `download.sh`. To run the script, type
+# the following in `data` directory.
+#
+# $ ./setup_julia_data.sh
+
 set -e
 
 if [[ -z "${PREFIX}" ]]; then
@@ -9,11 +16,6 @@ else
 fi
 
 JULIA="${PREFIX}/bin/julia"
-
-if [ ! -d "SDPLIB" ]; then
-    git clone https://github.com/vsdp/SDPLIB
-    sed -i "s/eqaulG11/equalG11/" SDPLIB/README.md
-fi
 
 if [ ! -d "SDPLib_Importer" ]; then
     git clone https://github.com/migarstka/SDPLib_Importer
