@@ -229,9 +229,7 @@ def _read(file, config):
         file = os.path.expanduser(file)
         if not os.path.exists(file):
             _file = os.path.expanduser(
-                os.path.join(
-                    f"~/work/repos/github.com/vsdp/SDPLIB/data/{file}"
-                )
+                os.path.join(f"data/SDPLIB/data/{file}")
             )
             if not os.path.exists(_file):
                 raise FileNotFoundError(file)
@@ -637,7 +635,7 @@ def _parse_int(text, pos=0):
 def get_optimal_objective_value(problem_name):
     if "." in problem_name:
         problem_name = problem_name.split(".")[0]
-    path = os.path.expanduser("~/work/repos/github.com/vsdp/SDPLIB/README.md")
+    path = os.path.expanduser("data/SDPLIB/README.md")
     lines = []
     with open(path, "r") as f:
         mode = 0
