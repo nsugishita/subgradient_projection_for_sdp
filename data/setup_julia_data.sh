@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Set up data files to run COSMO.
+# Set up data files to run COSMO
 #
 # This must be run after `download.sh`. To run the script, type
 # the following in `data` directory.

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Download SDPLIB data.
+# Download SDPLIB data
 #
 # To run the script, type the following in `data` directory.
 #
