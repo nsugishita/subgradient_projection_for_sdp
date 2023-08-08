@@ -7,6 +7,13 @@ import itertools
 import os
 import unittest
 
+try:
+    import cplex  # noqa: F401
+
+    has_cplex = True
+except ImportError:
+    has_cplex = False
+
 
 def load_tests(loader, tests, ignore):
     iterable = itertools.chain(os.walk("cpsdppy"), os.walk("examples"))
@@ -16,6 +23,8 @@ def load_tests(loader, tests, ignore):
         for filename in filenames:
             ext = os.path.splitext(filename)[1]
             if ext == ".py":
+                if (not has_cplex) and ("cplex" in filename):
+                    continue
                 _dirpath = dirpath.replace("/", ".")
                 tested = _dirpath + "." + os.path.splitext(filename)[0]
 

@@ -6,7 +6,13 @@ import enum
 import tempfile
 import typing
 
-import cplex  # type: ignore
+try:
+    import cplex  # type: ignore
+
+    has_cplex = True
+except ImportError:
+    has_cplex = False
+
 import numpy as np
 import scipy.sparse  # type: ignore
 
@@ -46,6 +52,8 @@ class CplexInterface(base.BaseSolverInterface):
 
     def __init__(self, config=None) -> None:
         """Initialise a CplexInterface instance"""
+        import cplex
+
         super().__init__(config)
         self.model = cplex.Cplex()
         self.model.set_error_stream(None)
@@ -762,16 +770,16 @@ def tostr(a):
         return bytes(a.tolist()).decode("utf8")
 
 
-m = cplex.Cplex()
+if has_cplex:
+    m = cplex.Cplex()
 
+    class Method(enum.IntEnum):
+        """Algorithm used to solve continuous models"""
 
-class Method(enum.IntEnum):
-    """Algorithm used to solve continuous models"""
-
-    AUTOMATIC = m.parameters.lpmethod.values.auto
-    PRIMAL_SIMPLEX = m.parameters.lpmethod.values.primal
-    DUAL_SIMPLEX = m.parameters.lpmethod.values.dual
-    BARRIER = m.parameters.lpmethod.values.barrier
+        AUTOMATIC = m.parameters.lpmethod.values.auto
+        PRIMAL_SIMPLEX = m.parameters.lpmethod.values.primal
+        DUAL_SIMPLEX = m.parameters.lpmethod.values.dual
+        BARRIER = m.parameters.lpmethod.values.barrier
 
 
 def get_A(model: typing.Any, row=None, column=None):
