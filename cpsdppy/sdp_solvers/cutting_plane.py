@@ -222,7 +222,7 @@ def run(problem_data, config):
     result = dict()
     result.update(
         dict(
-            algorithm="subgradient_projection",
+            algorithm="cutting_plane",
             hostname=os.uname()[1],
             solver_status=solver_status,
             lb=np.nanmax(journal.get_all("lb")),
