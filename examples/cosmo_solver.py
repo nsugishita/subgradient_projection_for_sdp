@@ -18,9 +18,11 @@ def run(problem_data, config):
     walltime : float
     n_iterations : int
     """
+    problem_name = config.problem_name
+    tol = config.tol
     command = (
         "/home/nsugishi/local/default/bin/julia --project=juliaenv "
-        "-e 'include(\"examples/run_cosmo.jl\");' -- theta1 1e-3"
+        f"-e 'include(\"examples/run_cosmo.jl\");' -- {problem_name} {tol:.0e}"
     )
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
