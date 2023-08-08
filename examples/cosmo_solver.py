@@ -18,8 +18,9 @@ def run(problem_data, config):
     walltime : float
     n_iterations : int
     """
+    prefix = os.environ.get("PREFIX", "/usr")
     command = (
-        "/home/nsugishi/local/default/bin/julia --project=juliaenv "
+        f"{prefix}/bin/julia --project=juliaenv "
         "-e 'include(\"examples/run_cosmo.jl\");' -- theta1 1e-3"
     )
     env = os.environ.copy()
