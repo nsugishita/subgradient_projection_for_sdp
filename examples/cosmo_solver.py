@@ -19,9 +19,11 @@ def run(problem_data, config):
     n_iterations : int
     """
     prefix = os.environ.get("PREFIX", "/usr")
+    problem_name = config.problem_name
+    tol = config.tol
     command = (
         f"{prefix}/bin/julia --project=juliaenv "
-        "-e 'include(\"examples/run_cosmo.jl\");' -- theta1 1e-3"
+        f"-e 'include(\"examples/run_cosmo.jl\");' -- {problem_name} {tol:.0e}"
     )
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
