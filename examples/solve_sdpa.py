@@ -98,6 +98,30 @@ def run_subprocess(config, dir):
     return returncode, result
 
 
+missing: dict = {}
+
+
+def load_result(config, dir, default=missing):
+    """Run the solver on a subprocess"""
+    returncode_path = _get_paths(config, dir)["returncode"]
+    if os.path.exists(returncode_path):
+        # Cache files exist. Retrieve the cached returncode.
+        with open(returncode_path, "r") as f:
+            returncode = int(f.read())
+    else:
+        returncode = None
+
+    # Load a cached result if exists.
+    result = _load_result(config, dir, default=default)
+
+    if result is missing:
+        raise FileNotFoundError(
+            config._asstr(only_modified=True, shorten=True)
+        )
+
+    return returncode, result
+
+
 def _run_impl(config):
     problem_data = sdpa.read(config)
 
@@ -124,7 +148,7 @@ def _run_subprocess_impl(config, dir):
     return ret.returncode
 
 
-def _load_result(config, dir):
+def _load_result(config, dir, default=None):
     """Load a cached result"""
     cache_path = _get_paths(config, dir)["cache"]
 
@@ -132,7 +156,7 @@ def _load_result(config, dir):
         with open(cache_path, "rb") as f:
             return pickle.load(f)
     except FileNotFoundError:
-        return
+        return default
 
 
 def _get_paths(config, dir) -> typing.Dict[str, str]:
