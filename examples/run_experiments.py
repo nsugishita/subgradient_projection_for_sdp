@@ -189,12 +189,21 @@ def summary(run_data):
     for tpls, _, _ in run_data:
         index = [k for k, _ in tpls if k not in dropped]
         break
+    try:
+        tol_position = index.index("tol")
+    except ValueError:
+        tol_position = -1
+    if "solver" in df:
+        df["solver"][df["solver"] == "subgradient_projection"] = "subgrad"
     df = df.set_index(index)
     df = df.sort_index()
     df["walltime"] = df["walltime"].astype(float)
     df["walltime"] = np.round(df["walltime"].values, 2)
     with pd.option_context("display.max_rows", 999):
-        print(df)
+        if tol_position >= 0:
+            print(df.unstack(level=tol_position))
+        else:
+            print(df)
         with open(f"{result_dir}/summary.txt", "w") as f:
             f.write(df.to_string())
             f.write("\n")
