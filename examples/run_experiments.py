@@ -8,6 +8,7 @@ configurations and gathers the result.
 
 import argparse
 import collections
+import datetime
 import itertools
 import logging
 
@@ -107,12 +108,31 @@ def main() -> None:
                 "tol",
                 [1e-2, 1e-3],
                 "n_linear_cuts",
+                [0],
+                "eigen_comb_cut",
+                [1],
+            )
+        )
+        summary_file = f"{result_dir}/summary_smoke_test.txt"
+        _impl(base_config, setups, summary_file=summary_file)
+
+        setups = list(
+            namedtuples_from_product(
+                "setup",
+                "problem_name",
+                args.problem_names,
+                "solver",
+                ["subgradient_projection"],
+                "tol",
+                [1e-2, 1e-3],
+                "n_linear_cuts",
                 [0, 1],
                 "eigen_comb_cut",
                 [0, 1],
             )
         )
-        _impl(base_config, setups)
+        summary_file = f"{result_dir}/summary_grid_search.txt"
+        _impl(base_config, setups, summary_file=summary_file)
 
         setups = list(
             namedtuples_from_product(
@@ -129,10 +149,15 @@ def main() -> None:
                 [1],
             )
         )
-        _impl(base_config, setups)
+        summary_file = f"{result_dir}/summary_vs_baselines.txt"
+        _impl(base_config, setups, summary_file=summary_file)
 
 
-def _impl(base_config, setups):
+def _impl(base_config, setups, summary_file=""):
+    if summary_file:
+        if ".txt" not in summary_file:
+            raise ValueError(f"expected *.txt but got {summary_file}")
+
     def config_filter(config):
         if config.n_linear_cuts == 0:
             if config.eigen_comb_cut == 0:
@@ -147,23 +172,27 @@ def _impl(base_config, setups):
 
         logger.info("- " * 20)
         logger.info(str(setup))
+        logger.info(datetime.datetime.now().isoformat())
         logger.info("- " * 20)
 
         returncode, result = solve_sdpa.run_subprocess(config, result_dir)
         run_data.append((config._astuple(shorten=True), returncode, result))
 
-        summary(run_data)
+        logger.info("= " * 20)
+        logger.info(f"returncode: {returncode}")
+        logger.info(datetime.datetime.now().isoformat())
+        logger.info("= " * 20)
+
+        summary(run_data, summary_file=summary_file)
 
 
-def summary(run_data):
+def summary(run_data, summary_file):
     """Print summary
 
     This takes a list of 2-tuple, `(configurations, returncode, results)`.
     `configurations` is a tuple of pairs `(configuration, value)`,
     while `resuls` is a dictionary with `walltime` and `n_iterations`.
     """
-    if len(run_data) <= 1:
-        return
     records = []
     for config_tuple, returncode, result in run_data:
         if result is not None:
@@ -184,7 +213,10 @@ def summary(run_data):
         )
     df = pd.DataFrame.from_records([{k: v for k, v in x} for x in records])
     dropped = []
+    kept = ["problem", "solver", "tol"]
     for column in list(df.columns[:-2]):
+        if column in kept:
+            continue
         if np.unique(df[column]).size == 1:
             dropped.append(column)
     df.drop(columns=dropped, inplace=True)
@@ -196,20 +228,27 @@ def summary(run_data):
     except ValueError:
         tol_position = -1
     if "solver" in df:
-        df["solver"][df["solver"] == "subgradient_projection"] = "subgrad"
+        df.loc[df["solver"] == "subgradient_projection", "solver"] = "subgrad"
     df = df.set_index(index)
     df = df.sort_index()
     df["walltime"] = df["walltime"].astype(float)
     df["walltime"] = np.round(df["walltime"].values, 2)
     with pd.option_context("display.max_rows", 999):
         if tol_position >= 0:
-            print(df.unstack(level=tol_position))
+            unstacked = df.unstack(level=tol_position)
         else:
-            print(df)
-        with open(f"{result_dir}/summary.txt", "w") as f:
-            f.write(df.to_string())
-            f.write("\n")
-    df.to_csv(f"{result_dir}/summary.csv")
+            unstacked = df
+        print(unstacked)
+        if summary_file:
+            with open(summary_file, "w") as f:
+                f.write(unstacked.to_string())
+                f.write("\n")
+                f.write("\n")
+
+                f.write(
+                    f"last update: {datetime.datetime.now().isoformat()}\n"
+                )
+            df.to_csv(summary_file.replace(".txt", ".csv"))
 
 
 def namedtuples_from_product(name, *args):
