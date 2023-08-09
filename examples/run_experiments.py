@@ -20,7 +20,9 @@ from examples import solve_sdpa
 
 logger = logging.getLogger(__name__)
 
-version = "v8"
+# v9: simpler step size manager
+
+version = "v9"
 result_dir = f"tmp/sdpa/{version}/result"
 
 
