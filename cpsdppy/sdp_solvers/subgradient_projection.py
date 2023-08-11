@@ -414,6 +414,8 @@ class StepSizeManager:
         self.fv = np.array([])
         self.gv = np.array([])
 
+        self.best_score = np.inf
+
     @property
     def step_size(self):
         return self.config.step_size * self.step_size_factor
@@ -429,31 +431,56 @@ class StepSizeManager:
 
         iter = len(self.gx) - 1
 
-        warmup = 4
-        v_x = np.linalg.norm(v - x, ord=2)
+        if self.config.step_size_manager_version == 1:
 
-        if iter <= warmup:
-            step_size_adjustament = "none"
-        elif v_x <= self.config.feas_tol:
-            step_size_adjustament = "increase"
-        elif np.all(self.gv[warmup:] > 1e-3):
-            step_size_adjustament = "decrease"
-        else:
-            score = self.fx.copy()
-            score[:warmup] = np.inf
-            score[self.gx > self.config.feas_tol] = np.inf
-            if score[-1] <= np.min(score[:-1]):
+            warmup = 4
+            v_x = np.linalg.norm(v - x, ord=2)
+
+            if iter <= warmup:
+                step_size_adjustament = "none"
+            elif v_x <= self.config.feas_tol:
                 step_size_adjustament = "increase"
+            elif np.all(self.gv[warmup:] > 1e-3):
+                step_size_adjustament = "decrease"
+            else:
+                score = self.fx.copy()
+                score[:warmup] = np.inf
+                score[self.gx > self.config.feas_tol] = np.inf
+                if score[-1] <= np.min(score[:-1]):
+                    step_size_adjustament = "increase"
+                else:
+                    step_size_adjustament = "decrease"
+
+            if iter >= warmup:
+                if step_size_adjustament == "increase":
+                    self.step_size_factor += shift
+                    self.step_size_factor *= scale
+                elif step_size_adjustament == "decrease":
+                    self.step_size_factor -= shift
+                    self.step_size_factor /= scale
+
+        elif self.config.step_size_manager_version == 2:
+            if iter <= 4:
+                return
+
+            score = fv
+
+            if np.max(gv) > self.config.feas_tol:
+                step_size_adjustament = "decrease"
+            elif self.best_score > score:
+                step_size_adjustament = "increase"
+                self.best_score = score
             else:
                 step_size_adjustament = "decrease"
 
-        if iter >= warmup:
             if step_size_adjustament == "increase":
                 self.step_size_factor += shift
                 self.step_size_factor *= scale
             elif step_size_adjustament == "decrease":
                 self.step_size_factor -= shift
-                self.step_size_factor /= scale
+                self.step_size_factor *= 1 - (scale - 1)
+
+            self.step_size_factor = np.clip(self.step_size_factor, 1e-3, 1e3)
 
 
 # vimquickrun: . ./scripts/activate.sh ; python %

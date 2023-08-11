@@ -8,6 +8,7 @@ configurations and gathers the result.
 
 import argparse
 import collections
+import datetime
 import itertools
 import logging
 
@@ -20,7 +21,9 @@ from examples import solve_sdpa
 
 logger = logging.getLogger(__name__)
 
-version = "v8"
+# v9: simpler step size manager
+
+version = "v9"
 result_dir = f"tmp/sdpa/{version}/result"
 
 
@@ -70,8 +73,13 @@ def main() -> None:
         "--smoke-test",
         action="store_true",
     )
+    parser.add_argument(
+        "--no-run",
+        action="store_true",
+    )
     config_module.add_arguments(parser)
     args = parser.parse_args()
+    args.no_run = True  # TODO XXX
 
     base_config = config_module.Config()
     config_module.parse_args(base_config, args)
@@ -105,12 +113,40 @@ def main() -> None:
                 "tol",
                 [1e-2, 1e-3],
                 "n_linear_cuts",
+                [0],
+                "eigen_comb_cut",
+                [1],
+            )
+        )
+        summary_file = f"{result_dir}/summary_smoke_test.txt"
+        _impl(
+            base_config, setups, summary_file=summary_file, no_run=args.no_run
+        )
+
+        setups = list(
+            namedtuples_from_product(
+                "setup",
+                "problem_name",
+                args.problem_names,
+                "solver",
+                ["subgradient_projection"],
+                "tol",
+                [1e-2, 1e-3],
+                "n_linear_cuts",
                 [0, 1],
                 "eigen_comb_cut",
                 [0, 1],
             )
         )
-        _impl(base_config, setups)
+        summary_file = f"{result_dir}/summary_grid_search.txt"
+        df = _impl(
+            base_config,
+            setups,
+            summary_file=summary_file,
+            no_run=args.no_run,
+            verbose=False,
+        )
+        print_grid_search(df)
 
         setups = list(
             namedtuples_from_product(
@@ -127,10 +163,29 @@ def main() -> None:
                 [1],
             )
         )
-        _impl(base_config, setups)
+        summary_file = f"{result_dir}/summary_vs_baselines.txt"
+        df = _impl(
+            base_config,
+            setups,
+            summary_file=summary_file,
+            no_run=args.no_run,
+            verbose=False,
+        )
+        print_vs_baselines(df)
 
 
-def _impl(base_config, setups):
+def _impl(
+    base_config,
+    setups,
+    summary_file="",
+    no_run=False,
+    callback=None,
+    verbose=True,
+):
+    if summary_file:
+        if ".txt" not in summary_file:
+            raise ValueError(f"expected *.txt but got {summary_file}")
+
     def config_filter(config):
         if config.n_linear_cuts == 0:
             if config.eigen_comb_cut == 0:
@@ -145,23 +200,35 @@ def _impl(base_config, setups):
 
         logger.info("- " * 20)
         logger.info(str(setup))
+        logger.info(datetime.datetime.now().isoformat())
         logger.info("- " * 20)
 
-        returncode, result = solve_sdpa.run_subprocess(config, result_dir)
+        if no_run:
+            returncode, result = solve_sdpa.load_result(
+                config, result_dir, default=None
+            )
+        else:
+            returncode, result = solve_sdpa.run_subprocess(config, result_dir)
         run_data.append((config._astuple(shorten=True), returncode, result))
 
-        summary(run_data)
+        logger.info("= " * 20)
+        logger.info(f"returncode: {returncode}")
+        logger.info(datetime.datetime.now().isoformat())
+        logger.info("= " * 20)
+
+        df = summary(run_data, summary_file=summary_file, verbose=verbose)
+        if callback is not None:
+            callback(df)
+    return df
 
 
-def summary(run_data):
+def summary(run_data, summary_file, verbose=True):
     """Print summary
 
     This takes a list of 2-tuple, `(configurations, returncode, results)`.
     `configurations` is a tuple of pairs `(configuration, value)`,
     while `resuls` is a dictionary with `walltime` and `n_iterations`.
     """
-    if len(run_data) <= 1:
-        return
     records = []
     for config_tuple, returncode, result in run_data:
         if result is not None:
@@ -182,23 +249,106 @@ def summary(run_data):
         )
     df = pd.DataFrame.from_records([{k: v for k, v in x} for x in records])
     dropped = []
+    kept = ["problem", "solver", "tol"]
     for column in list(df.columns[:-2]):
+        if column in kept:
+            continue
         if np.unique(df[column]).size == 1:
             dropped.append(column)
     df.drop(columns=dropped, inplace=True)
     for tpls, _, _ in run_data:
         index = [k for k, _ in tpls if k not in dropped]
         break
+    try:
+        tol_position = index.index("tol")
+    except ValueError:
+        tol_position = -1
+    if "solver" in df:
+        df.loc[df["solver"] == "subgradient_projection", "solver"] = "subgrad"
     df = df.set_index(index)
     df = df.sort_index()
     df["walltime"] = df["walltime"].astype(float)
     df["walltime"] = np.round(df["walltime"].values, 2)
     with pd.option_context("display.max_rows", 999):
-        print(df)
-        with open(f"{result_dir}/summary.txt", "w") as f:
-            f.write(df.to_string())
-            f.write("\n")
-    df.to_csv(f"{result_dir}/summary.csv")
+        if tol_position >= 0:
+            unstacked = df.unstack(level=tol_position)
+        else:
+            unstacked = df
+        if verbose:
+            print(unstacked)
+        if summary_file:
+            with open(summary_file, "w") as f:
+                f.write(unstacked.to_string())
+                f.write("\n")
+                f.write("\n")
+
+                f.write(
+                    f"last update: {datetime.datetime.now().isoformat()}\n"
+                )
+            df.to_csv(summary_file.replace(".txt", ".csv"))
+    return df
+
+
+def print_grid_search(df):
+    print("grid search result")
+    for data_name in ["walltime", "n_iterations"]:
+        problem_names = np.unique(df.reset_index()["problem"])
+        print(f"{'':10s} ", end="")
+        for item in ["1e-2", "", "", "1e-3", "", ""]:
+            print(f"{item:>9s} ", end="")
+        print()
+        print(f"{'problem':10s} ", end="")
+        for item in ["min", "comb", "min+comb"] * 2:
+            print(f"{item:>9s} ", end="")
+        print()
+        for problem_name in problem_names:
+            print(f"{problem_name:10s} ", end="")
+            solver = "subgrad"
+            for tol in [1e-2, 1e-3]:
+                for n_cuts in [(1, 0), (0, 1), (1, 1)]:
+                    try:
+                        value = df.loc[
+                            (problem_name, solver, tol) + n_cuts, data_name
+                        ]
+                    except KeyError:
+                        value = np.nan
+                    if data_name == "walltime":
+                        print(f"{value:9.1f} ", end="")
+                    else:
+                        print(f"{value:9.0f} ", end="")
+            print()
+
+
+def print_vs_baselines(df):
+    print("baselines result")
+    problem_names = np.unique(df.reset_index()["problem"])
+    print(f"{'':10s} ", end="")
+    for item in ["1e-2", "", "", "1e-3", "", ""]:
+        print(f"{item:>9s} ", end="")
+    print()
+    print(f"{'problem':10s} ", end="")
+    for item in ["subgrad", "cosmo", "mosek"] * 2:
+        print(f"{item:>9s} ", end="")
+    print()
+    for problem_name in problem_names:
+        print(f"{problem_name:10s} ", end="")
+        for tol in [1e-2, 1e-3]:
+            for solver in ["subgrad", "cosmo", "mosek"]:
+                try:
+                    returncode = df.loc[
+                        (problem_name, solver, tol), "returncode"
+                    ]
+                except KeyError:
+                    returncode = np.nan
+                try:
+                    value = df.loc[(problem_name, solver, tol), "walltime"]
+                except KeyError:
+                    value = np.nan
+                if returncode == -9:
+                    print(f"{'timeout':>9s} ", end="")
+                else:
+                    print(f"{value:9.1f} ", end="")
+        print()
 
 
 def namedtuples_from_product(name, *args):

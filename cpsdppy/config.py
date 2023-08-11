@@ -43,6 +43,8 @@ class Config(config_utils.BaseConfig):
         # Parameter to control the regularization strength
         self.step_size: float = 1.0
 
+        self.step_size_manager_version: int = 2
+
         self.step_size_manager_shift: float = 0.0
         self.step_size_manager_scale: float = 1.2
 
