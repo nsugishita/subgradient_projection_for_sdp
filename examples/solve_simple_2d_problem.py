@@ -97,7 +97,7 @@ os.makedirs(plot_dir, exist_ok=True)
 
 grid_size = 30
 
-setup = 1
+setup = 3
 
 
 def main():
@@ -297,17 +297,33 @@ def main():
         ]
         v_box = [False, False, True]
     elif setup == 3:
+        # With subscripts
+        # x_offsets = [
+        #     [0.0, 0.6],
+        #     [-0.6, 0.6],
+        #     [0.8, -0.2],
+        #     [0.8, 0.0],
+        # ]
+        # x_box = [False, False, False, False]
+        # v_offsets = [
+        #     [-0.4, -0.4],
+        #     [0.5, -0.5],
+        #     [0.8, 0.1],
+        # ]
+        # v_box = [False, False, True]
+
+        # With superscripts
         x_offsets = [
-            [0.0, 0.6],
-            [-0.6, 0.6],
-            [0.8, -0.2],
-            [0.8, 0.0],
+            [-0.2, 0.4],
+            [-0.7, 0.6],
+            [1.1, -0.1],
+            [1.1, 0.0],
         ]
         x_box = [False, False, False, False]
         v_offsets = [
-            [-0.4, -0.4],
-            [0.5, -0.5],
-            [0.8, 0.1],
+            [-0.5, -0.8],
+            [0.7, -0.5],
+            [1.1, 0.2],
         ]
         v_box = [False, False, True]
     else:
@@ -318,7 +334,7 @@ def main():
         ax.text(
             x_list[i][0] + x_offsets[i][0],
             x_list[i][1] + x_offsets[i][1],
-            f"$x_{i}$",
+            "$x^{(" + f"{i}" + ")}$",
             va="center",
             ha="center",
             bbox=bbox if x_box[i] else None,
@@ -327,7 +343,7 @@ def main():
         ax.text(
             v_list[i][0] + v_offsets[i][0],
             v_list[i][1] + v_offsets[i][1],
-            f"$y_{i}$",
+            "$y^{(" + f"{i}" + ")}$",
             va="center",
             ha="center",
             bbox=bbox if v_box[i] else None,
