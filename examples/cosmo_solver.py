@@ -20,8 +20,14 @@ def run(problem_data, config):
     """
     problem_name = config.problem_name
     tol = config.tol
+    julia_path = os.path.expanduser(config.julia_path)
+    if not julia_path:
+        if os.path.exists("bin/julia"):
+            julia_path = "bin/julia"
+    if not julia_path:
+        julia_path = "julia"
     command = (
-        "/home/nsugishi/local/default/bin/julia --project=juliaenv "
+        f"{julia_path} --project=juliaenv "
         f"-e 'include(\"examples/run_cosmo.jl\");' -- {problem_name} {tol:.0e}"
     )
     env = os.environ.copy()

@@ -79,7 +79,6 @@ def main() -> None:
     )
     config_module.add_arguments(parser)
     args = parser.parse_args()
-    args.no_run = True  # TODO XXX
 
     base_config = config_module.Config()
     config_module.parse_args(base_config, args)
@@ -91,7 +90,9 @@ def main() -> None:
             namedtuples_from_product(
                 "setup",
                 "problem_name",
-                args.problem_names,
+                ["gpp100", "mcp100"],
+                "solver",
+                ["subgradient_projection", "cosmo"],
                 "tol",
                 [1e-3],
                 "n_linear_cuts",
@@ -383,4 +384,4 @@ if __name__ == "__main__":
     doctest.testmod()
     main()
 
-# vimquickrun: . ./scripts/activate.sh ; python %
+# vimquickrun: python % --smoke-test

@@ -142,21 +142,27 @@ def _run_impl(config):
 def _run_subprocess_impl(config, dir):
     command = f"python examples/solve_sdpa.py --dir {dir} "
     for key, value in config._asdict(only_modified=True).items():
+        value = str(value)
+        if "~" in value:
+            value = f'"{value}"'
         command += f"--{key.replace('_', '-')} {str(value)} "
 
     ret = subprocess.run(command, shell=True)
     return ret.returncode
 
 
-def _load_result(config, dir, default=None):
+def _load_result(config, dir, default=missing):
     """Load a cached result"""
     cache_path = _get_paths(config, dir)["cache"]
 
     try:
         with open(cache_path, "rb") as f:
             return pickle.load(f)
-    except FileNotFoundError:
-        return default
+    except FileNotFoundError as e:
+        if default is missing:
+            raise e from None
+        else:
+            return default
 
 
 def _get_paths(config, dir) -> typing.Dict[str, str]:

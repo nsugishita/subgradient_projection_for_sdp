@@ -149,8 +149,6 @@ def main():
             label=label,
         )
 
-    # ax.legend(loc="upper center")
-
     x_offsets = [
         [-0.2, 0.4],
         [-0.7, 0.6],
