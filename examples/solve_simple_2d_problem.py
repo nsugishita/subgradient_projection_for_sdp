@@ -33,7 +33,7 @@ def main():
     initial_x = [-3, -3]
 
     problem_data = get_problem_data()
-    problem_data["target_objective"] = cpsdppy.sdp_solvers.mosek_solver.run(
+    problem_data["target_objective"] = cpsdppy.sdp_solvers.mosek.run(
         problem_data, config
     )["primal_objective"]
     problem_data["initial_x"] = np.array(initial_x)
