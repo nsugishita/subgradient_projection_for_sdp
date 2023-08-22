@@ -26,9 +26,10 @@ def run(problem_data, config):
             julia_path = "bin/julia"
     if not julia_path:
         julia_path = "julia"
+    dir_path = os.path.dirname(__file__)
     command = (
         f"{julia_path} --project=juliaenv "
-        f"-e 'include(\"examples/run_cosmo.jl\");' -- {problem_name} {tol:.0e}"
+        f"-e 'include(\"{dir_path}/cosmo.jl\");' -- {problem_name} {tol:.0e}"
     )
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"

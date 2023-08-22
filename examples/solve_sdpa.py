@@ -30,8 +30,7 @@ import typing
 
 from cpsdppy import config as config_module
 from cpsdppy import logging_helper, sdpa
-from cpsdppy.sdp_solvers import mosek_solver, subgradient_projection
-from examples import cosmo_solver
+from cpsdppy.sdp_solvers import cosmo, mosek_solver, subgradient_projection
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +129,7 @@ def _run_impl(config):
     elif config.solver == "mosek":
         res = mosek_solver.run(problem_data, config)
     elif config.solver == "cosmo":
-        res = cosmo_solver.run(problem_data, config)
+        res = cosmo.run(problem_data, config)
     elif config.solver == "":
         raise ValueError("config.solver is missing")
     else:

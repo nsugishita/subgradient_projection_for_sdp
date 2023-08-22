@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # v9: simpler step size manager
 
-version = "v9"
+version = "vdev"
 result_dir = f"tmp/sdpa/{version}/result"
 
 
