@@ -92,7 +92,7 @@ def main() -> None:
                 "problem_name",
                 ["gpp100", "mcp100"],
                 "solver",
-                ["subgradient_projection", "cosmo"],
+                ["subgradient_projection", "mosek"],
                 "tol",
                 [1e-3],
                 "n_linear_cuts",
