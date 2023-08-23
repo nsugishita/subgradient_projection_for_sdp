@@ -21,11 +21,12 @@ with open("LICENSE") as f:
 setup(
     name=package_name,
     version=__version__,
-    description="Cutting-plane method for SDP",
+    description="Subgradient projection method for SDP",
     long_description=readme,
     author="Nagisa Sugishita",
     author_email="s1576972@ed.ac.uk",
     install_requires=[
+        "cplex",
         "gurobipy",
         "matplotlib",
         "Mosek",

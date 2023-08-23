@@ -21,6 +21,9 @@ grid_size = 300
 
 def main():
     config = cpsdppy.config.Config()
+    from cpsdppy import logging_helper
+
+    logging_helper.setup()
 
     config.eval_lb_every = 0
     config.iteration_limit = 3

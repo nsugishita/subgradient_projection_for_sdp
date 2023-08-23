@@ -7,14 +7,8 @@ set -e
 
 . ./scripts/activate.sh
 
-if [[ -z "${PREFIX}" ]]; then
-  MY_PREFIX="/usr"
-else
-  MY_PREFIX="${PREFIX}"
-fi
-
-CXX="$MY_PREFIX/bin/g++"
-CMAKE="$MY_PREFIX/bin/cmake"
+CXX=$(pwd)/bin/g++
+CMAKE=$(pwd)/bin/cmake
 
 pushd extensions/indexremove/
 mkdir -p build

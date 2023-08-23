@@ -1,6 +1,8 @@
 This is the official implementation of "Subgradient Projection Method with
 Outer Approximation for Solving Semidefinite Programming Problems".
 
+This is tested on Python 3.9, Julia 1.8.5 and g++ 13.0.1 20230405.
+
 # Install
 
 ## Dependencies
@@ -49,7 +51,7 @@ There is a script to install COSMO.
 Type the following command.
 
 ```
-. ./scripts/set_up_cosmo.sh
+./scripts/set_up_cosmo.sh
 ```
 
 ## Download Data
@@ -69,7 +71,7 @@ popd
 Finally, we need to build extensions using the following commands.
 
 ```
-. ./scripts/build.sh
+./scripts/build.sh
 ```
 
 # Run Experiments
