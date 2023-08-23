@@ -10,7 +10,6 @@ Assuming you have these binaries on your machine, put symbolic links
 in `bin` directory.
 
 ```
-│
 ├─ README.md
 ├─ data
 ├─ bin
@@ -31,21 +30,10 @@ python3 -m venv env
 . ./env/bin/activate
 ```
 
-## Mosek
+## Gurobi and Mosek
 
-Get a lisence from Mosek [website](https://www.mosek.com).
-
-## Gurobi
-
-Gurobi is only required to run the column generation.
-First, download Gurobi from the [website](https://www.gurobi.com).
-Then, type the following commands:
-
-```
-pushd /Library/gurobi1001/macos_universal2/
-python setup.py install
-popd
-```
+Get a lisence from Gurobi [website](https://www.gurobi.com) and
+Mosek [website](https://www.mosek.com).
 
 ## Insall Python Package
 
@@ -64,7 +52,7 @@ Type the following command.
 . ./scripts/set_up_cosmo.sh
 ```
 
-## Download data
+## Download Data
 
 We need to download data to run the experiments.
 Check the license of SDPLIB etc. and use the following commands.
@@ -76,7 +64,7 @@ pushd data
 popd
 ```
 
-## Build
+## Build C++ Extensions
 
 Finally, we need to build extensions using the following commands.
 
@@ -84,7 +72,7 @@ Finally, we need to build extensions using the following commands.
 . ./scripts/build.sh
 ```
 
-# Run experiments
+# Run Experiments
 
 Before running the program, we need to set up environment variables.
 Typically the following script will handle these.
