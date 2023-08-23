@@ -8,12 +8,6 @@
 
 set -e
 
-if [[ -z "${PREFIX}" ]]; then
-  MY_PREFIX="/usr"
-else
-  MY_PREFIX="${PREFIX}"
-fi
-
-JULIA="${PREFIX}/bin/julia"
+JULIA=bin/julia
 
 $JULIA --project=juliaenv -e "import Pkg; Pkg.add([\"FileIO\", \"JLD2\", \"COSMO\", \"JuMP\", \"JSON\"])"

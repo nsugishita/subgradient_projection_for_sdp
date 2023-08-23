@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 
 # v9: simpler step size manager
 
-version = "v9"
-result_dir = f"tmp/sdpa/{version}/result"
+version = "vdev"
+result_dir = f"outputs/sdplib/{version}/result"
 
 
 def main() -> None:
@@ -35,11 +35,6 @@ def main() -> None:
         type=str,
         nargs="+",
         default=[
-            # "gpp100",
-            # "gpp124-1",
-            # "gpp124-2",
-            # "gpp124-3",
-            # "gpp124-4",
             "gpp250-1",
             "gpp250-2",
             "gpp250-3",
@@ -48,11 +43,6 @@ def main() -> None:
             "gpp500-2",
             "gpp500-3",
             "gpp500-4",
-            # "mcp100",
-            # "mcp124-1",
-            # "mcp124-2",
-            # "mcp124-3",
-            # "mcp124-4",
             "mcp250-1",
             "mcp250-2",
             "mcp250-3",
@@ -61,12 +51,6 @@ def main() -> None:
             "mcp500-2",
             "mcp500-3",
             "mcp500-4",
-            # "theta1",
-            # "theta2",
-            # "theta3",
-            # "theta4",
-            # "theta5",
-            # "theta6",
         ],
     )
     parser.add_argument(
@@ -79,7 +63,6 @@ def main() -> None:
     )
     config_module.add_arguments(parser)
     args = parser.parse_args()
-    args.no_run = True  # TODO XXX
 
     base_config = config_module.Config()
     config_module.parse_args(base_config, args)
@@ -91,7 +74,9 @@ def main() -> None:
             namedtuples_from_product(
                 "setup",
                 "problem_name",
-                args.problem_names,
+                ["gpp100", "mcp100"],
+                "solver",
+                ["subgradient_projection", "mosek", "cosmo"],
                 "tol",
                 [1e-3],
                 "n_linear_cuts",
@@ -383,4 +368,4 @@ if __name__ == "__main__":
     doctest.testmod()
     main()
 
-# vimquickrun: . ./scripts/activate.sh ; python %
+# vimquickrun: python % --smoke-test

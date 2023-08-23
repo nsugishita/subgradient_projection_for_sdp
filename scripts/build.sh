@@ -7,10 +7,13 @@ set -e
 
 . ./scripts/activate.sh
 
+CXX=$(pwd)/bin/g++
+CMAKE=$(pwd)/bin/cmake
+
 pushd extensions/indexremove/
 mkdir -p build
 cd build
-CXX=~/local/default/bin/g++ ~/local/default/bin/cmake ..
+CXX=$CXX $CMAKE ..
 make
 popd
 python -c "import indexremove"
@@ -19,7 +22,7 @@ echo "built 'indexremove' successfully"
 pushd extensions/uniquelist/
 mkdir -p build
 cd build
-CXX=~/local/default/bin/g++ ~/local/default/bin/cmake ..
+CXX=$CXX $CMAKE ..
 make
 popd
 python -c "import uniquelist"

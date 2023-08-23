@@ -30,8 +30,7 @@ import typing
 
 from cpsdppy import config as config_module
 from cpsdppy import logging_helper, sdpa
-from cpsdppy.sdp_solvers import mosek_solver, subgradient_projection
-from examples import cosmo_solver
+from cpsdppy.sdp_solvers import cosmo, mosek, subgradient_projection
 
 logger = logging.getLogger(__name__)
 
@@ -128,9 +127,9 @@ def _run_impl(config):
     if config.solver == "subgradient_projection":
         res = subgradient_projection.run(problem_data, config)
     elif config.solver == "mosek":
-        res = mosek_solver.run(problem_data, config)
+        res = mosek.run(problem_data, config)
     elif config.solver == "cosmo":
-        res = cosmo_solver.run(problem_data, config)
+        res = cosmo.run(problem_data, config)
     elif config.solver == "":
         raise ValueError("config.solver is missing")
     else:
@@ -142,21 +141,27 @@ def _run_impl(config):
 def _run_subprocess_impl(config, dir):
     command = f"python examples/solve_sdpa.py --dir {dir} "
     for key, value in config._asdict(only_modified=True).items():
+        value = str(value)
+        if "~" in value:
+            value = f'"{value}"'
         command += f"--{key.replace('_', '-')} {str(value)} "
 
     ret = subprocess.run(command, shell=True)
     return ret.returncode
 
 
-def _load_result(config, dir, default=None):
+def _load_result(config, dir, default=missing):
     """Load a cached result"""
     cache_path = _get_paths(config, dir)["cache"]
 
     try:
         with open(cache_path, "rb") as f:
             return pickle.load(f)
-    except FileNotFoundError:
-        return default
+    except FileNotFoundError as e:
+        if default is missing:
+            raise e from None
+        else:
+            return default
 
 
 def _get_paths(config, dir) -> typing.Dict[str, str]:
