@@ -2,7 +2,7 @@ This is the official implementation of "Subgradient Projection Method with
 Outer Approximation for Solving Semidefinite Programming Problems" by
 Nagisa Sugishita and Miguel Anjos.
 
-This is tested on Python 3.9, Julia 1.8.5 and g++ 13.0.1.
+This is tested on Python 3.9.
 
 # Install
 
