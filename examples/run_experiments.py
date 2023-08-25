@@ -21,9 +21,7 @@ from examples import solve_sdpa
 
 logger = logging.getLogger(__name__)
 
-# v9: simpler step size manager
-
-version = "vdev"
+version = "v1"
 result_dir = f"outputs/sdplib/{version}/result"
 
 
@@ -368,4 +366,4 @@ if __name__ == "__main__":
     doctest.testmod()
     main()
 
-# vimquickrun: python % --smoke-test
+# vimquickrun: python %
