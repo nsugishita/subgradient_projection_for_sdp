@@ -93,7 +93,7 @@ def run_subprocess(config, dir):
                 f.write(str(returncode))
 
     # Load a cached result if exists.
-    result = _load_result(config, dir)
+    result = _load_result(config, dir, default=None)
     return returncode, result
 
 
