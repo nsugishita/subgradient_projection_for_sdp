@@ -122,14 +122,14 @@ def main() -> None:
             )
         )
         summary_file = f"{result_dir}/summary_grid_search.txt"
-        df = _impl(
+        grid_search_df = _impl(
             base_config,
             setups,
             summary_file=summary_file,
             no_run=args.no_run,
             verbose=False,
         )
-        print_grid_search(df)
+        print_grid_search(grid_search_df)
 
         setups = list(
             namedtuples_from_product(
@@ -147,14 +147,16 @@ def main() -> None:
             )
         )
         summary_file = f"{result_dir}/summary_vs_baselines.txt"
-        df = _impl(
+        vs_baseline_df = _impl(
             base_config,
             setups,
             summary_file=summary_file,
             no_run=args.no_run,
             verbose=False,
         )
-        print_vs_baselines(df)
+
+        print_grid_search(grid_search_df)
+        print_vs_baselines(vs_baseline_df)
 
 
 def _impl(
