@@ -5,6 +5,7 @@ __pycache__/
 *.egg-info/
 log
 tmp
+backups
 bin
 outputs
 vimquickrun.sh
