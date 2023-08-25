@@ -6,7 +6,8 @@ __pycache__/
 log
 tmp
 backups
-bin
+bin/*
+!bin/README.md
 outputs
 vimquickrun.sh
 .DS_store
