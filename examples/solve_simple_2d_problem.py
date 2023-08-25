@@ -3,6 +3,7 @@
 """Run the subgradient projection method on a simple problem"""
 
 import os
+import shutil
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,7 +11,9 @@ import scipy.sparse
 
 import cpsdppy
 
-plt.rcParams.update({"text.usetex": True, "font.family": "Helvetica"})
+has_latex = shutil.which("pdflatex") is not None
+
+plt.rcParams.update({"text.usetex": has_latex, "font.family": "Helvetica"})
 
 plot_dir = "outputs/simple_example/v1"
 
@@ -171,7 +174,7 @@ def main():
         ax.text(
             x_list[i][0] + x_offsets[i][0],
             x_list[i][1] + x_offsets[i][1],
-            "$x^{(" + f"{i}" + ")}$",
+            "$x^{(" + f"{i}" + ")}$" if has_latex else f"x({i})",
             va="center",
             ha="center",
             bbox=bbox if x_box[i] else None,
@@ -180,7 +183,7 @@ def main():
         ax.text(
             v_list[i][0] + v_offsets[i][0],
             v_list[i][1] + v_offsets[i][1],
-            "$y^{(" + f"{i}" + ")}$",
+            "$y^{(" + f"{i}" + ")}$" if has_latex else f"y({i})",
             va="center",
             ha="center",
             bbox=bbox if v_box[i] else None,

@@ -8,3 +8,4 @@ tmp
 bin
 outputs
 vimquickrun.sh
+.DS_store
