@@ -10,5 +10,5 @@ set -e
 
 if [ ! -d "SDPLIB" ]; then
     git clone https://github.com/vsdp/SDPLIB
-    sed -i '' -e "s/eqaulG11/equalG11/" SDPLIB/README.md
+    sed -i.bu "s/eqaulG11/equalG11/" SDPLIB/README.md
 fi
