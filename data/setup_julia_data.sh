@@ -15,8 +15,8 @@ JULIA=$(pwd)/../bin/julia
 if [ ! -d "SDPLib_Importer" ]; then
     git clone https://github.com/migarstka/SDPLib_Importer
     pushd SDPLib_Importer
-    sed -i "s/20:113/32:123/" SDPLib_Importer.jl
-    sed -i "s/split(ln\[1\])\[4\]/split(ln\[1\])\[8\]/" SDPLib_Importer.jl
+    sed -i.bu "s/20:113/32:123/" SDPLib_Importer.jl
+    sed -i.bu "s/split(ln\[1\])\[4\]/split(ln\[1\])\[8\]/" SDPLib_Importer.jl
     popd
 fi
 
