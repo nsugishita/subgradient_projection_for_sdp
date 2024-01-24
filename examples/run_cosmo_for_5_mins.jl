@@ -33,6 +33,23 @@ function run_cosmo_with_time_limit(data, time_limit)
     )
     COSMO.assemble!(model_direct, spzeros(m, m), c, cs1, settings = settings);
     res = COSMO.optimize!(model_direct);
+
+    if res.status == :Solved
+        status_code = 0
+    elseif res.status == :Unsolved
+        status_code = 1
+    elseif res.status == :Max_iter_reached
+        status_code = 2
+    elseif res.status == :Time_limit_reached
+        status_code = 3
+    elseif res.status == :Primal_infeasible
+        status_code = 4
+    elseif res.status == :Dual_infeasible
+        status_code = 5
+    else
+        status_code = 6
+    end
+
     return Dict(
         "x" => res.x,
         "f" => res.obj_val,
@@ -44,6 +61,7 @@ function run_cosmo_with_time_limit(data, time_limit)
         "r_dual" => res.info.r_dual,
         "max_norm_prim" => res.info.max_norm_prim,
         "max_norm_dual" => res.info.max_norm_dual,
+        "status" => status_code,
     );
 end
 
