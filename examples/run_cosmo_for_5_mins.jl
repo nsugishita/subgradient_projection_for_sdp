@@ -29,6 +29,7 @@ function run_cosmo_with_time_limit(data, time_limit)
     settings = COSMO.Settings(
          verbose = true,
          time_limit = time_limit,
+         max_iter = 10000000,
     )
     COSMO.assemble!(model_direct, spzeros(m, m), c, cs1, settings = settings);
     res = COSMO.optimize!(model_direct);
