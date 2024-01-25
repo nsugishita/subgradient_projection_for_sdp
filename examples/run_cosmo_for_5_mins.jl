@@ -30,6 +30,8 @@ function run_cosmo_with_time_limit(data, time_limit)
          verbose = true,
          time_limit = time_limit,
          max_iter = 10000000,
+         eps_abs = 1e-8,
+         eps_rel= 1e-8,
     )
     COSMO.assemble!(model_direct, spzeros(m, m), c, cs1, settings = settings);
     res = COSMO.optimize!(model_direct);
