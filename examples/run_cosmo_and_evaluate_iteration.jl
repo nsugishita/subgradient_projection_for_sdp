@@ -1,7 +1,7 @@
 using FileIO, COSMO, SparseArrays, LinearAlgebra, Test, JuMP, MosekTools, Printf, NPZ
 
 function evaluate_solution(problem_name, x)
-    solution_path = "cosmo_results/run_cosmo_and_evaluation_iteration/tmp/$(problem_name).npy"
+    solution_path = "cosmo_results/run_cosmo_and_evaluate_iteration/tmp/$(problem_name).npy"
     npzwrite(solution_path, x)
     res = readchomp(`bash -c ". ./scripts/activate.sh && python scripts/evaluate_solution.py --problem $(problem_name) --solution $(solution_path)"`)
     f, f_gap, g = split(res, " ")
@@ -125,18 +125,8 @@ function optimize2!(ws::COSMO.Workspace{T}, problem_name) where {T <: AbstractFl
             y = ws2.utility_vars.vec_m
         end
 
-        # solution_path = "cosmo_results/run_cosmo_and_evaluation_iteration/tmp/$(problem_name).npy"
-        # npzwrite(solution_path, ws2.vars.x)
-        # res = readchomp(`bash -c ". ./scripts/activate.sh && python scripts/evaluate_solution.py --problem $(problem_name) --solution $(solution_path)"`)
-        # f, f_gap, g = split(res, " ")
-        # f = parse(Float64, f)
-        # f_gap = parse(Float64, f_gap)
-        # g = parse(Float64, g)
         f, f_gap, g = evaluate_solution(problem_name, ws2.vars.x)
 
-        # println("iter: $(iter + ws.safeguarding_iter)  x: $(ws2.vars.x[1:5])")
-
-        # push!(out["walltime"])
         push!(out["n_iterations"], iter + ws.safeguarding_iter )
         push!(out["x"], ws2.vars.x)
         push!(out["obj"], cost)
@@ -155,10 +145,12 @@ function optimize2!(ws::COSMO.Workspace{T}, problem_name) where {T <: AbstractFl
         end
         # <<<<
 
+        # >>>
         # NS Oirignal terminal condition
         # if status != :Undetermined
         #     break
         # end
+        # <<<
 
     end #END-ADMM-MAIN-LOOP
 
@@ -263,7 +255,7 @@ run_cosmo_and_evaluate_iteration("mcp100", true);
 for problem_name in ARGS
     println("solving $(problem_name)");
     result = run_cosmo_and_evaluate_iteration(problem_name, false);
-    result_path = "cosmo_results/run_cosmo_and_evaluation_iteration/$(problem_name).npz"
+    result_path = "cosmo_results/run_cosmo_and_evaluate_iteration/$(problem_name).npz"
     npzwrite(result_path, result);
 end
 
