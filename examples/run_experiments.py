@@ -21,7 +21,7 @@ from examples import solve_sdpa
 
 logger = logging.getLogger(__name__)
 
-version = "v1"
+version = "v2"
 result_dir = f"outputs/sdplib/{version}/result"
 
 
@@ -74,7 +74,8 @@ def main() -> None:
                 "problem_name",
                 ["gpp100", "mcp100"],
                 "solver",
-                ["subgradient_projection", "mosek", "cosmo"],
+                # ["subgradient_projection", "mosek", "cosmo"],
+                ["subgradient_projection", "mosek"],
                 "tol",
                 [1e-3],
                 "n_linear_cuts",
@@ -86,25 +87,50 @@ def main() -> None:
         _impl(base_config, setups)
 
     else:
-        setups = list(
-            namedtuples_from_product(
-                "setup",
-                "problem_name",
-                args.problem_names,
-                "solver",
-                ["subgradient_projection"],
-                "tol",
-                [1e-2, 1e-3],
-                "n_linear_cuts",
-                [0],
-                "eigen_comb_cut",
-                [1],
-            )
-        )
-        summary_file = f"{result_dir}/summary_smoke_test.txt"
-        _impl(
-            base_config, setups, summary_file=summary_file, no_run=args.no_run
-        )
+        # setups = list(
+        #     namedtuples_from_product(
+        #         "setup",
+        #         "problem_name",
+        #         args.problem_names,
+        #         "solver",
+        #         ["subgradient_projection"],
+        #         "tol",
+        #         [1e-2, 1e-3],
+        #         "n_linear_cuts",
+        #         [0],
+        #         "eigen_comb_cut",
+        #         [1],
+        #     )
+        # )
+        # summary_file = f"{result_dir}/summary_smoke_test.txt"
+        # _impl(
+        #     base_config, setups, summary_file=summary_file, no_run=args.no_run
+        # )
+        #
+        # setups = list(
+        #     namedtuples_from_product(
+        #         "setup",
+        #         "problem_name",
+        #         args.problem_names,
+        #         "solver",
+        #         ["subgradient_projection"],
+        #         "tol",
+        #         [1e-2, 1e-3],
+        #         "n_linear_cuts",
+        #         [0, 1],
+        #         "eigen_comb_cut",
+        #         [0, 1],
+        #     )
+        # )
+        # summary_file = f"{result_dir}/summary_grid_search.txt"
+        # grid_search_df = _impl(
+        #     base_config,
+        #     setups,
+        #     summary_file=summary_file,
+        #     no_run=args.no_run,
+        #     verbose=False,
+        # )
+        # print_grid_search(grid_search_df)
 
         setups = list(
             namedtuples_from_product(
@@ -112,32 +138,8 @@ def main() -> None:
                 "problem_name",
                 args.problem_names,
                 "solver",
-                ["subgradient_projection"],
-                "tol",
-                [1e-2, 1e-3],
-                "n_linear_cuts",
-                [0, 1],
-                "eigen_comb_cut",
-                [0, 1],
-            )
-        )
-        summary_file = f"{result_dir}/summary_grid_search.txt"
-        grid_search_df = _impl(
-            base_config,
-            setups,
-            summary_file=summary_file,
-            no_run=args.no_run,
-            verbose=False,
-        )
-        print_grid_search(grid_search_df)
-
-        setups = list(
-            namedtuples_from_product(
-                "setup",
-                "problem_name",
-                args.problem_names,
-                "solver",
-                ["cosmo", "mosek", "subgradient_projection"],
+                ["mosek", "subgradient_projection"],
+                # ["cosmo", "mosek", "subgradient_projection"],
                 "tol",
                 [1e-2, 1e-3],
                 "n_linear_cuts",
