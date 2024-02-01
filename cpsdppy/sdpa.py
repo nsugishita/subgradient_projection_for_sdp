@@ -654,11 +654,14 @@ def get_optimal_objective_value(problem_name):
     lines = [x[2:-3].replace("|", ",") for x in lines]
     lines = "\n".join(lines)
     df = pd.read_csv(io.StringIO(lines), sep=" +, +", engine="python")
-    return float(
-        df.loc[df["Problem"] == problem_name, "Optimal Objective Value"].iloc[
-            0
-        ]
-    )
+    try:
+        return float(
+            df.loc[df["Problem"] == problem_name, "Optimal Objective Value"].iloc[
+                0
+            ]
+        )
+    except:
+        return None
 
 
 if __name__ == "__main__":
