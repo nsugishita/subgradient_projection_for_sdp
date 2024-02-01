@@ -52,7 +52,10 @@ def main() -> None:
     config = config_module.Config()
     config.problem_name = args.problem
 
-    x = np.load(args.solution)
+    if "txt" in args.solution:
+        x = np.loadtxt(args.solution)
+    else:
+        x = np.load(args.solution)
 
     problem_data = sdpa.read(config)
     eval_x = common.evaluate_solution(x, problem_data)
