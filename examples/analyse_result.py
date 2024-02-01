@@ -11,6 +11,11 @@ import pandas as pd
 # 1: Ignore infeasibility in Mosek
 mode = 0
 
+# 'walltime' or 'n_iterations'
+item = "n_iterations"
+
+latex = True
+
 def load_subgradient_projection_result(problem_name, tol):
     if mode == 2:
         if tol != 1e-3:
@@ -33,13 +38,18 @@ def load_subgradient_projection_result(problem_name, tol):
         )
     with open(path, "rb") as f:
         data = pickle.load(f)
-    return data["walltime"]
+    if item == "walltime":
+        return data["walltime"]
+    elif item == "n_iterations":
+        return data["n_iterations"]
+    else:
+        raise ValueError(f"unknown item: {item}")
 
 
 def load_mosek_result(problem_name, tol):
     if mode >= 1:
         df = pd.read_csv("outputs/revised/mosek/walltime.csv")
-        return df[(df["problem_name"] == problem_name) & (df["tol"] == tol)]["walltime"].item()
+        return df[(df["problem_name"] == problem_name) & (df["tol"] == tol)][item].item()
     else:
         path = (
             "outputs/sdplib/v2/result/"
@@ -47,14 +57,19 @@ def load_mosek_result(problem_name, tol):
         )
         with open(path, "rb") as f:
             data = pickle.load(f)
-        return data["walltime"]
+        return data[item]
 
 
 def load_cosmo_result(problem_name, tol):
     data = np.load(
         f"cosmo_results/run_cosmo_with_iteration_limit/{problem_name}_{tol}.npz"
     )
-    return data["time"]
+    if item == "walltime":
+        return data["time"]
+    elif item == "n_iterations":
+        return data["iter"]
+    else:
+        raise ValueError(f"unknown item: {item}")
 
 
 def load_result(problem_name, solver_name, tol):
@@ -88,12 +103,50 @@ def main():
         "mcp500-3",
         "mcp500-4",
     ]
+    first = True
+    print(f"{'':>8s}  ", end="")
+    first = False
+    for tol in [1e-2, 1e-3]:
+        for solver_i, solver_name in enumerate(["subgrad", "mosek", "cosmo"]):
+            if latex and not first:
+                print("& ", end="")
+            if solver_i == 0:
+                print(f"tol: {tol * 100:3.1f} ", end="")
+            else:
+                print(f"{'':>8s} ", end="")
+            first = False
+    if latex:
+        print("\\\\")
+    else:
+        print()
+    first = True
+    print(f"{'problem':>8s}  ", end="")
+    first = False
+    for tol in [1e-2, 1e-3]:
+        for solver_name in ["subgrad", "mosek", "cosmo"]:
+            if latex and not first:
+                print("& ", end="")
+            print(f"{solver_name:>8s} ", end="")
+            first = False
+    if latex:
+        print("\\\\")
+    else:
+        print()
     for problem_name in problem_names:
+        first = True
+        print(f"{problem_name:>8s}  ", end="")
+        first = False
         for tol in [1e-2, 1e-3]:
             for solver_name in ["subgrad", "mosek", "cosmo"]:
+                if latex and not first:
+                    print("& ", end="")
                 v = load_result(problem_name, solver_name, tol)
                 print(f"{v:8.1f} ", end="")
-        print()
+                first = False
+        if latex:
+            print("\\\\")
+        else:
+            print()
 
 
 if __name__ == "__main__":

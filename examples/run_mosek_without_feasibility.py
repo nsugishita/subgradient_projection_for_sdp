@@ -16,7 +16,7 @@ from cpsdppy.sdp_solvers import mosek
 
 
 def main():
-    df = pd.DataFrame(columns=["problem_name", "tol", "walltime"])
+    df = pd.DataFrame(columns=["problem_name", "tol", "walltime", "n_iterations"])
     problem_names = [
         "mcp100",
         "mcp250-1",
@@ -58,7 +58,8 @@ def main():
         ) / np.abs(problem_data["target_objective"])
         for tol in [1e-2, 1e-3]:
             walltime = np.min(res["iter_walltime"][gap <= tol])
-            df.loc[len(df)] = (config.problem_name, tol, walltime)
+            n_iterations = np.nonzero(gap <= tol)[0][0] + 1
+            df.loc[len(df)] = (config.problem_name, tol, walltime, n_iterations)
 
     df.to_csv("outputs/revised/mosek/walltime.csv")
 
