@@ -279,6 +279,11 @@ def _read(file, config):
     F = []
 
     for line_number, line in enumerate(file):
+        line = line.strip()
+
+        if line == "":
+            continue
+
         if mode == mode_comment:
             if line[0] in '*"':
                 continue
