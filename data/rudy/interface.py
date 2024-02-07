@@ -9,12 +9,40 @@ import sys
 import os
 import subprocess
 
-def run(size, density, random_seed):
+
+def run(size, density, random_seed, weight_lb, weight_ub):
     """Run the main routine of this script"""
-    program = os.path.join(os.path.dirname(__file__), "rudy")
-    command = [program, "-rnd_graph", str(size), str(density), str(random_seed)]
-    res = subprocess.run(command, capture_output=True, check=True, encoding="utf8")
-    return convert(res.stdout)
+    if weight_lb is not None:
+        program = os.path.join(os.path.dirname(__file__), "rudy")
+        command = [
+            program,
+            "-rnd_graph",
+            str(size),
+            str(density),
+            str(random_seed),
+            "-random",
+            str(weight_lb),
+            str(weight_ub),
+            str(int(random_seed) + 1000),
+        ]
+        res = subprocess.run(
+            command, capture_output=True, check=True, encoding="utf8"
+        )
+        return convert(res.stdout)
+    else:
+        program = os.path.join(os.path.dirname(__file__), "rudy")
+        command = [
+            program,
+            "-rnd_graph",
+            str(size),
+            str(density),
+            str(random_seed),
+        ]
+        res = subprocess.run(
+            command, capture_output=True, check=True, encoding="utf8"
+        )
+        return convert(res.stdout)
+
 
 def convert(text):
     lines = text.strip().split("\n")
@@ -50,12 +78,21 @@ def convert(text):
 
     return out
 
+
 def main():
-    if len(sys.argv) != 4:
-        print(f"usage: python {sys.argv[0]} size density random_seed")
+    if len(sys.argv) != 4 and len(sys.argv) != 6:
+        print(
+            f"usage: python {sys.argv[0]} size density random_seed [weight_lb weight_ub]"
+        )
         return
 
-    print(run(sys.argv[1], sys.argv[2], sys.argv[3]).strip())
+    argv = sys.argv[1:]
+
+    if len(argv) == 3:
+        argv.append(None)
+        argv.append(None)
+    print(run(argv[0], argv[1], argv[2], argv[3], argv[4]).strip())
+
 
 if __name__ == "__main__":
     main()
