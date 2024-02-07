@@ -9,7 +9,7 @@ import pickle
 from cpsdppy.sdp_solvers import cosmo, mosek, subgradient_projection
 import os
 
-dir_name = "examples/rudy/out/"
+dir_name = "data/rudy/out/"
 
 os.makedirs(dir_name, exist_ok=True)
 

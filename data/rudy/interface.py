@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
-"""Description of this file"""
+"""Run rudy and generate a max-cut problem
+
+
+"""
 
 import sys
 import os
@@ -52,7 +55,7 @@ def main():
         print(f"usage: python {sys.argv[0]} size density random_seed")
         return
 
-    print(run(sys.argv[1], sys.argv[2], sys.argv[3]))
+    print(run(sys.argv[1], sys.argv[2], sys.argv[3]).strip())
 
 if __name__ == "__main__":
     main()
