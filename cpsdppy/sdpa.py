@@ -223,18 +223,13 @@ def _read(file, config):
     F : list of SDPAMatrix
     """
     if isinstance(file, str) and "\n" in file:
+        # Data is given as a text
         f = io.StringIO(textwrap.dedent(file).strip())
         return _read(f, config)
     elif isinstance(file, str):
         file = os.path.expanduser(file)
-        if not os.path.exists(file):
-            _file = os.path.expanduser(
-                os.path.join(f"data/SDPLIB/data/{file}")
-            )
-            if not os.path.exists(_file):
-                raise FileNotFoundError(file)
-            file = _file
-        with open(os.path.expanduser(file), "r") as f:
+        file = os.path.splitext(file)[0] + ".dat-s"
+        with open(file, "r") as f:
             return _read(f, config)
 
     if config is None:
