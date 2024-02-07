@@ -67,7 +67,7 @@ class Config(config_utils.BaseConfig):
         self.initial_cut_type: str = "none"
 
         # Number of cuts corresponding to negative eigenvalues added to RMP.
-        self.n_linear_cuts: int = 1
+        self.n_linear_cuts: int = 0
         self.n_linear_cuts_for_unregularised_rmp: int = -1
         self.n_linear_cuts_for_regularised_rmp: int = -1
 
