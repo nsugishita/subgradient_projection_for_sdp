@@ -638,6 +638,14 @@ def _parse_int(text, pos=0):
 
 
 def get_optimal_objective_value(problem_name):
+    if "/" in problem_name:
+        path = os.path.splitext(problem_name)[0] + ".txt"
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                return float(f.read())
+        else:
+            return None
+
     if "." in problem_name:
         problem_name = problem_name.split(".")[0]
     path = os.path.expanduser("data/SDPLIB/README.md")
@@ -661,9 +669,9 @@ def get_optimal_objective_value(problem_name):
     df = pd.read_csv(io.StringIO(lines), sep=" +, +", engine="python")
     try:
         return float(
-            df.loc[df["Problem"] == problem_name, "Optimal Objective Value"].iloc[
-                0
-            ]
+            df.loc[
+                df["Problem"] == problem_name, "Optimal Objective Value"
+            ].iloc[0]
         )
     except:
         return None
