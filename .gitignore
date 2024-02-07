@@ -10,5 +10,6 @@ backups
 bin/*
 !bin/README.md
 outputs
+out
 vimquickrun.sh
 .DS_store
