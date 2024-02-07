@@ -31,17 +31,25 @@ def run(problem_data, config):
         for i in range(len(c)):
             lhs = 0
             for block_index in range(n_blocks):
-                F = problem_data["lmi_constraint_coefficient"][block_index][i].tocoo()
+                F = problem_data["lmi_constraint_coefficient"][block_index][
+                    i
+                ].tocoo()
                 coef = fusion.Matrix.sparse(
-                    F.shape[0], F.shape[1], F.row, F.col, F.data)
-                lhs = fusion.Expr.add(lhs, fusion.Expr.dot(coef, X[block_index]))
-            constraints.append(model.constraint(lhs, fusion.Domain.equalsTo(c[i])))
+                    F.shape[0], F.shape[1], F.row, F.col, F.data
+                )
+                lhs = fusion.Expr.add(
+                    lhs, fusion.Expr.dot(coef, X[block_index])
+                )
+            constraints.append(
+                model.constraint(lhs, fusion.Domain.equalsTo(c[i]))
+            )
 
         obj = 0
         for block_index in range(n_blocks):
             F = problem_data["lmi_constraint_offset"][block_index].tocoo()
             coef = fusion.Matrix.sparse(
-                F.shape[0], F.shape[1], F.row, F.col, F.data)
+                F.shape[0], F.shape[1], F.row, F.col, F.data
+            )
             obj = fusion.Expr.add(obj, fusion.Expr.dot(coef, X[block_index]))
         model.objective(fusion.ObjectiveSense.Maximize, obj)
 
