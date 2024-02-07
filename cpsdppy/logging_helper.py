@@ -9,17 +9,18 @@ import logging.config
 import os
 
 
-def setup(dir: str = "log", prefix: str = "") -> None:
+def setup(dir: str = "log", prefix: str = "", link: bool = False) -> None:
     """Set up loggers
 
-    This set up log handlers and sybolic links to log files..
+    This set up log handlers and sybolic links to log files.
 
     1) `console` handler: Output log messages to console.
     2) `infofile`, `debugfile` handlers: Save log messages to files.
        By default, the log files are named as `log/info.txt` and
        `log/debug.txt` in the current directory.
     3) `log/info_link.txt`, `log/debug_link.txt`: Symbolic links to
-       the files created by `infofile`, `debugfile` handlers.
+       the files created by `infofile`, `debugfile` handlers. They are
+       created when `link` is set True.
 
     Parameters
     ----------
@@ -29,6 +30,8 @@ def setup(dir: str = "log", prefix: str = "") -> None:
     prefix : str, optional
         Prefix added to the files created by `infofile` and `debugfile`
         handlers.
+    link : bool, default False
+        If True, create symbolic links.
     """
     config: dict = copy.deepcopy(default_config)
     if dir:
@@ -47,19 +50,20 @@ def setup(dir: str = "log", prefix: str = "") -> None:
             config["root"]["handlers"].remove(key)
     logging.config.dictConfig(config)
 
-    os.makedirs("log", exist_ok=True)
-    for key in ["debugfile", "infofile"]:
-        if key not in config["handlers"]:
-            continue
-        symlink_path = os.path.join(
-            "log", key.replace("file", "") + "_link.txt"
-        )
-        if os.path.exists(symlink_path):
-            os.remove(symlink_path)
-        os.symlink(
-            os.path.abspath(config["handlers"][key]["filename"]),
-            symlink_path,
-        )
+    if link:
+        os.makedirs("log", exist_ok=True)
+        for key in ["debugfile", "infofile"]:
+            if key not in config["handlers"]:
+                continue
+            symlink_path = os.path.join(
+                "log", key.replace("file", "") + "_link.txt"
+            )
+            if os.path.exists(symlink_path):
+                os.remove(symlink_path)
+            os.symlink(
+                os.path.abspath(config["handlers"][key]["filename"]),
+                symlink_path,
+            )
 
 
 class save_log(object):
