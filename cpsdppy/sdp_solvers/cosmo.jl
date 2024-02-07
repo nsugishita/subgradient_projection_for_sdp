@@ -1,7 +1,11 @@
 using FileIO, COSMO, SparseArrays, LinearAlgebra, Test, JuMP, JSON
 
 function run_cosmo(problem_name, kwargs=Dict())
-    data = load("./data/SDPLIB/data/$(problem_name).jld2");
+    if occursin("/", problem_name)
+        data = load(problem_name);
+    else
+        data = load("./data/SDPLIB/data/$(problem_name).jld2");
+    end
     F = data["F"]
     c = data["c"]
     m = data["m"]
