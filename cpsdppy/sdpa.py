@@ -75,7 +75,7 @@ def read(problem_name, config=None):
         _problem_name = problem_name
     if _problem_name == "":
         raise ValueError("problem_name is missing")
-    if "." not in _problem_name:
+    if "." not in _problem_name and "\n" not in _problem_name:
         _problem_name = _problem_name + ".dat-s"
     sdpa_data = _read(_problem_name, config)
     return _convert_sdpa_data_to_dict(_problem_name, sdpa_data, config)
