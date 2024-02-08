@@ -7,7 +7,7 @@ import os
 import subprocess
 import sys
 
-n_workers = 6
+n_workers = 4
 
 
 def worker(path, worker_index, lock):
@@ -30,7 +30,7 @@ def worker(path, worker_index, lock):
                     f.write(x + "\n")
 
         print(f"worker: {worker_index}   command: {line}")
-        subprocess.run(line, shell=True, check=True, env=env)
+        subprocess.run(line, shell=True, check=True, capture_output=True, env=env)
 
 
 def main():
