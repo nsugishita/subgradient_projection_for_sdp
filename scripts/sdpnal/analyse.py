@@ -26,7 +26,7 @@ def main():
         "gpp500-4",
     ]
     tols = [0.01, 0.001]
-    dir_path = "outputs/revised/sdpnal/"
+    dir_path = "outputs/v2/sdpnal/"
     print(f"{'tol':>8s}  ", end="")
     for tol_i, tol in enumerate(tols):
         print(f"{tol:6.3f}", end="  ")

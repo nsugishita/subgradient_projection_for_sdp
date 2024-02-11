@@ -1,21 +1,23 @@
 # -*- coding: utf-8 -*-
 
-"""Description of this file"""
+"""Run SDPNAL+ on test instances"""
 
-import sys
+import os
+import subprocess
+
 import numpy as np
+
 from cpsdppy import config as config_module
 from cpsdppy import logging_helper, sdpa
-import subprocess
-import os
 from cpsdppy.sdp_solvers import common
 
 
-def run(problem_name, tol, feas_tol):
+def run(data_file_path, tol, feas_tol):
     cwd = os.getcwd()
+    problem_name = os.path.splitext(os.path.basename(data_file_path))[0]
 
     solution_path = (
-        f"{cwd}/outputs/revised/sdpnal/"
+        f"{cwd}/outputs/v2/sdpnal/"
         f"{problem_name}_{tol}_{feas_tol}_tmp_sol.txt"
     )
 
@@ -27,7 +29,7 @@ def run(problem_name, tol, feas_tol):
     # Find ub
     while True:
         command = (
-            f"bash scripts/sdpnal/interface.sh {problem_name} "
+            f"bash scripts/sdpnal/interface.sh {data_file_path} "
             f"{iteration_limit} {solution_path}"
         )
         res = subprocess.run(
@@ -40,7 +42,7 @@ def run(problem_name, tol, feas_tol):
         x = np.loadtxt(solution_path)
 
         config = config_module.Config()
-        config.problem_name = problem_name
+        config.problem_name = data_file_path
         problem_data = sdpa.read(config)
 
         eval_x = common.evaluate_solution(x, problem_data)
@@ -65,7 +67,7 @@ def run(problem_name, tol, feas_tol):
     while True:
         iteration_limit = int((lb + ub) / 2)
         command = (
-            f"bash scripts/sdpnal/interface.sh {problem_name} "
+            f"bash scripts/sdpnal/interface.sh {data_file_path} "
             f"{iteration_limit} {solution_path}"
         )
         res = subprocess.run(
@@ -78,7 +80,7 @@ def run(problem_name, tol, feas_tol):
         x = np.loadtxt(solution_path)
 
         config = config_module.Config()
-        config.problem_name = problem_name
+        config.problem_name = data_file_path
         problem_data = sdpa.read(config)
 
         eval_x = common.evaluate_solution(x, problem_data)
@@ -117,7 +119,7 @@ def run(problem_name, tol, feas_tol):
 
     while True:
         command = (
-            f"bash scripts/sdpnal/interface.sh {problem_name} "
+            f"bash scripts/sdpnal/interface.sh {data_file_path} "
             f"{iteration_limit} {solution_path}"
         )
         res = subprocess.run(
@@ -130,7 +132,7 @@ def run(problem_name, tol, feas_tol):
         x = np.loadtxt(solution_path)
 
         config = config_module.Config()
-        config.problem_name = problem_name
+        config.problem_name = data_file_path
         problem_data = sdpa.read(config)
 
         eval_x = common.evaluate_solution(x, problem_data)
@@ -158,38 +160,109 @@ def run(problem_name, tol, feas_tol):
 
         iteration_limit += 1
 
-    np.savez(
-        f"outputs/revised/sdpnal/{problem_name}_{tol}_{feas_tol}.npz", **out
-    )
+    np.savez(f"outputs/v2/sdpnal/{problem_name}_{tol}_{feas_tol}.npz", **out)
 
 
 def main():
     """Run the main routine of this script"""
-    if len(sys.argv) != 2 or sys.argv[1] not in ["1", "2"]:
-        print(f"usage: python {sys.argv[0]} 1|2")
-
-    if sys.argv[1] == "1":
-        problem_names = [
-            "mcp250-1",
-            "mcp250-2",
-            "mcp250-3",
-            "mcp250-4",
-            "mcp500-1",
-            "mcp500-2",
-            "mcp500-3",
-            "mcp500-4",
-        ]
-    elif sys.argv[1] == "2":
-        problem_names = [
-            "gpp250-1",
-            "gpp250-2",
-            "gpp250-3",
-            "gpp250-4",
-            "gpp500-1",
-            "gpp500-2",
-            "gpp500-3",
-            "gpp500-4",
-        ]
+    problem_names = [
+        "data/SDPLIB/data/gpp250-1.dat-s",
+        "data/SDPLIB/data/gpp250-2.dat-s",
+        "data/SDPLIB/data/gpp250-3.dat-s",
+        "data/SDPLIB/data/gpp250-4.dat-s",
+        "data/SDPLIB/data/gpp500-1.dat-s",
+        "data/SDPLIB/data/gpp500-2.dat-s",
+        "data/SDPLIB/data/gpp500-3.dat-s",
+        "data/SDPLIB/data/gpp500-4.dat-s",
+        "data/SDPLIB/data/mcp250-1.dat-s",
+        "data/SDPLIB/data/mcp250-2.dat-s",
+        "data/SDPLIB/data/mcp250-3.dat-s",
+        "data/SDPLIB/data/mcp250-4.dat-s",
+        "data/SDPLIB/data/mcp500-1.dat-s",
+        "data/SDPLIB/data/mcp500-2.dat-s",
+        "data/SDPLIB/data/mcp500-3.dat-s",
+        "data/SDPLIB/data/mcp500-4.dat-s",
+        "data/rudy/out/graph_1000_5_1.dat-s",
+        "data/rudy/out/graph_1000_5_2.dat-s",
+        "data/rudy/out/graph_1000_5_3.dat-s",
+        "data/rudy/out/graph_1000_5_4.dat-s",
+        "data/rudy/out/graph_2000_5_1.dat-s",
+        "data/rudy/out/graph_2000_5_2.dat-s",
+        "data/rudy/out/graph_2000_5_3.dat-s",
+        "data/rudy/out/graph_2000_5_4.dat-s",
+        "data/rudy/out/graph_3000_5_1.dat-s",
+        "data/rudy/out/graph_3000_5_2.dat-s",
+        "data/rudy/out/graph_3000_5_3.dat-s",
+        "data/rudy/out/graph_3000_5_4.dat-s",
+        "data/rudy/out/graph_4000_5_1.dat-s",
+        "data/rudy/out/graph_4000_5_2.dat-s",
+        "data/rudy/out/graph_4000_5_3.dat-s",
+        "data/rudy/out/graph_4000_5_4.dat-s",
+        "data/rudy/out/graph_5000_5_1.dat-s",
+        "data/rudy/out/graph_5000_5_2.dat-s",
+        "data/rudy/out/graph_5000_5_3.dat-s",
+        "data/rudy/out/graph_5000_5_4.dat-s",
+        "data/rudy/out/graph_1000_10_1.dat-s",
+        "data/rudy/out/graph_1000_10_2.dat-s",
+        "data/rudy/out/graph_1000_10_3.dat-s",
+        "data/rudy/out/graph_1000_10_4.dat-s",
+        "data/rudy/out/graph_2000_10_1.dat-s",
+        "data/rudy/out/graph_2000_10_2.dat-s",
+        "data/rudy/out/graph_2000_10_3.dat-s",
+        "data/rudy/out/graph_2000_10_4.dat-s",
+        "data/rudy/out/graph_3000_10_1.dat-s",
+        "data/rudy/out/graph_3000_10_2.dat-s",
+        "data/rudy/out/graph_3000_10_3.dat-s",
+        "data/rudy/out/graph_3000_10_4.dat-s",
+        "data/rudy/out/graph_4000_10_1.dat-s",
+        "data/rudy/out/graph_4000_10_2.dat-s",
+        "data/rudy/out/graph_4000_10_3.dat-s",
+        "data/rudy/out/graph_4000_10_4.dat-s",
+        "data/rudy/out/graph_5000_10_1.dat-s",
+        "data/rudy/out/graph_5000_10_2.dat-s",
+        "data/rudy/out/graph_5000_10_3.dat-s",
+        "data/rudy/out/graph_5000_10_4.dat-s",
+        "data/rudy/out/graph_1000_15_1.dat-s",
+        "data/rudy/out/graph_1000_15_2.dat-s",
+        "data/rudy/out/graph_1000_15_3.dat-s",
+        "data/rudy/out/graph_1000_15_4.dat-s",
+        "data/rudy/out/graph_2000_15_1.dat-s",
+        "data/rudy/out/graph_2000_15_2.dat-s",
+        "data/rudy/out/graph_2000_15_3.dat-s",
+        "data/rudy/out/graph_2000_15_4.dat-s",
+        "data/rudy/out/graph_3000_15_1.dat-s",
+        "data/rudy/out/graph_3000_15_2.dat-s",
+        "data/rudy/out/graph_3000_15_3.dat-s",
+        "data/rudy/out/graph_3000_15_4.dat-s",
+        "data/rudy/out/graph_4000_15_1.dat-s",
+        "data/rudy/out/graph_4000_15_2.dat-s",
+        "data/rudy/out/graph_4000_15_3.dat-s",
+        "data/rudy/out/graph_4000_15_4.dat-s",
+        "data/rudy/out/graph_5000_15_1.dat-s",
+        "data/rudy/out/graph_5000_15_2.dat-s",
+        "data/rudy/out/graph_5000_15_3.dat-s",
+        "data/rudy/out/graph_5000_15_4.dat-s",
+        "data/rudy/out/graph_1000_20_1.dat-s",
+        "data/rudy/out/graph_1000_20_2.dat-s",
+        "data/rudy/out/graph_1000_20_3.dat-s",
+        "data/rudy/out/graph_1000_20_4.dat-s",
+        "data/rudy/out/graph_2000_20_1.dat-s",
+        "data/rudy/out/graph_2000_20_2.dat-s",
+        "data/rudy/out/graph_2000_20_3.dat-s",
+        "data/rudy/out/graph_2000_20_4.dat-s",
+        "data/rudy/out/graph_3000_20_1.dat-s",
+        "data/rudy/out/graph_3000_20_2.dat-s",
+        "data/rudy/out/graph_3000_20_3.dat-s",
+        "data/rudy/out/graph_3000_20_4.dat-s",
+        "data/rudy/out/graph_4000_20_1.dat-s",
+        "data/rudy/out/graph_4000_20_2.dat-s",
+        "data/rudy/out/graph_4000_20_3.dat-s",
+        "data/rudy/out/graph_4000_20_4.dat-s",
+        "data/rudy/out/graph_5000_20_1.dat-s",
+        "data/rudy/out/graph_5000_20_2.dat-s",
+        "data/rudy/out/graph_5000_20_3.dat-s",
+        "data/rudy/out/graph_5000_20_4.dat-s",
+    ]
 
     for tol in [1e-2, 1e-3]:
         for problem_name in problem_names:

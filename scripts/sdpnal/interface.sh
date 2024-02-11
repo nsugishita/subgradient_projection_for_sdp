@@ -25,7 +25,7 @@ solution_path=$3
 cd external/SDPNAL+v1.0/
 module load matlab
 if [ "$#" -eq 3 ]; then
-    matlab -nodisplay -nosplash -nodesktop -r "maxNumCompThreads(1); startup; [blk,At,C,b] = read_sdpa('../../data/SDPLIB/data/${problem}.dat-s'); OPTIONS.maxiter=$iteration; OPTIONS.tol=0; OPTIONS.stopoption=0; [obj,X,y,Z] = sdpnalplus(blk,At,C,b,[],[],[],[],[],OPTIONS); save('${solution_path}', 'Z', '-ascii');  exit;"
+    matlab -singleCompThread -nodisplay -nosplash -nodesktop -r "maxNumCompThreads(1); startup; [blk,At,C,b] = read_sdpa('../../${problem}'); OPTIONS.maxiter=$iteration; OPTIONS.tol=0; OPTIONS.stopoption=0; [obj,X,y,Z] = sdpnalplus(blk,At,C,b,[],[],[],[],[],OPTIONS); save('${solution_path}', 'Z', '-ascii');  exit;"
 else
-    matlab -nodisplay -nosplash -nodesktop -r "maxNumCompThreads(1); startup; [blk,At,C,b] = read_sdpa('../../data/SDPLIB/data/${problem}.dat-s'); OPTIONS.maxiter=$iteration; OPTIONS.tol=0; OPTIONS.stopoption=0; [obj,X,y,Z] = sdpnalplus(blk,At,C,b,[],[],[],[],[],OPTIONS); exit;"
+    matlab -singleCompThread -nodisplay -nosplash -nodesktop -r "maxNumCompThreads(1); startup; [blk,At,C,b] = read_sdpa('../../${problem}'); OPTIONS.maxiter=$iteration; OPTIONS.tol=0; OPTIONS.stopoption=0; [obj,X,y,Z] = sdpnalplus(blk,At,C,b,[],[],[],[],[],OPTIONS); exit;"
 fi
