@@ -17,7 +17,7 @@ def run(data_file_path, tol, feas_tol):
     problem_name = os.path.splitext(os.path.basename(data_file_path))[0]
 
     solution_path = (
-        f"{cwd}/outputs/v2/sdpnal/"
+        f"{cwd}/outputs/v2/sdpnal2/"
         f"{problem_name}_{tol}_{feas_tol}_tmp_sol.txt"
     )
 
@@ -58,7 +58,7 @@ def run(data_file_path, tol, feas_tol):
             f"g: {eval_x.g.item():8.5f}"
         )
 
-        if eval_x.f_gap <= 2 * tol and eval_x.g.item() <= 2 * feas_tol:
+        if eval_x.f_gap <= 1.2 * tol and eval_x.g.item() <= 1.2 * feas_tol:
             ub = iteration_limit
             break
 
@@ -90,7 +90,7 @@ def run(data_file_path, tol, feas_tol):
                 pos = line.index("=") + 1
                 walltime = float(line[pos:])
 
-        if eval_x.f_gap <= 2 * tol and eval_x.g.item() <= 2 * feas_tol:
+        if eval_x.f_gap <= 1.2 * tol and eval_x.g.item() <= 1.2 * feas_tol:
             ub = min(ub, iteration_limit)
             if ub < lb:
                 lb = 1
@@ -103,10 +103,10 @@ def run(data_file_path, tol, feas_tol):
             f"g: {eval_x.g.item():8.5f}  bnd: {lb:4d} - {ub:4d}"
         )
 
-        if ub - lb <= 10:
+        if ub - lb <= 2:
             break
 
-    iteration_limit = lb
+    iteration_limit = lb + 1
 
     out = {
         "n_iterations": [],
@@ -160,7 +160,8 @@ def run(data_file_path, tol, feas_tol):
 
         iteration_limit += 1
 
-    np.savez(f"outputs/v2/sdpnal/{problem_name}_{tol}_{feas_tol}.npz", **out)
+    np.savez(f"outputs/v2/sdpnal2/{problem_name}_{tol}_{feas_tol}.npz", **out)
+    return out
 
 
 def main():
@@ -264,9 +265,11 @@ def main():
         "data/rudy/out/graph_5000_20_4.dat-s",
     ]
 
-    for tol in [1e-2, 1e-3]:
-        for problem_name in problem_names:
-            run(problem_name, tol, 1e-3)
+    for problem_name in problem_names:
+        for tol in [1e-2, 1e-3]:
+            res = run(problem_name, tol, 1e-3)
+            if (res["f_gap"][-1] <= 1e-3) and (res["g"][-1] <= 1e-3):
+                break;
 
 
 if __name__ == "__main__":
