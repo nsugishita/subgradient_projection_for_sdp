@@ -15,6 +15,12 @@ from cpsdppy.sdp_solvers import common
 def run(data_file_path, tol, feas_tol):
     cwd = os.getcwd()
     problem_name = os.path.splitext(os.path.basename(data_file_path))[0]
+    output_file_name = (
+        f"outputs/v2/sdpnal2/{problem_name}_{tol}_{feas_tol}.npz"
+    )
+
+    if os.path.exists(output_file_name):
+        return np.load(output_file_name)
 
     solution_path = (
         f"{cwd}/outputs/v2/sdpnal2/"
@@ -160,7 +166,7 @@ def run(data_file_path, tol, feas_tol):
 
         iteration_limit += 1
 
-    np.savez(f"outputs/v2/sdpnal2/{problem_name}_{tol}_{feas_tol}.npz", **out)
+    np.savez(output_file_name, **out)
     return out
 
 
@@ -263,13 +269,101 @@ def main():
         "data/rudy/out/graph_5000_20_2.dat-s",
         "data/rudy/out/graph_5000_20_3.dat-s",
         "data/rudy/out/graph_5000_20_4.dat-s",
+        "data/rudy/out/gpp_1000_5_1.dat-s",
+        "data/rudy/out/gpp_1000_5_2.dat-s",
+        "data/rudy/out/gpp_1000_5_3.dat-s",
+        "data/rudy/out/gpp_1000_5_4.dat-s",
+        "data/rudy/out/gpp_2000_5_1.dat-s",
+        "data/rudy/out/gpp_2000_5_2.dat-s",
+        "data/rudy/out/gpp_2000_5_3.dat-s",
+        "data/rudy/out/gpp_2000_5_4.dat-s",
+        "data/rudy/out/gpp_3000_5_1.dat-s",
+        "data/rudy/out/gpp_3000_5_2.dat-s",
+        "data/rudy/out/gpp_3000_5_3.dat-s",
+        "data/rudy/out/gpp_3000_5_4.dat-s",
+        "data/rudy/out/gpp_4000_5_1.dat-s",
+        "data/rudy/out/gpp_4000_5_2.dat-s",
+        "data/rudy/out/gpp_4000_5_3.dat-s",
+        "data/rudy/out/gpp_4000_5_4.dat-s",
+        "data/rudy/out/gpp_5000_5_1.dat-s",
+        "data/rudy/out/gpp_5000_5_2.dat-s",
+        "data/rudy/out/gpp_5000_5_3.dat-s",
+        "data/rudy/out/gpp_5000_5_4.dat-s",
+        "data/rudy/out/gpp_1000_10_1.dat-s",
+        "data/rudy/out/gpp_1000_10_2.dat-s",
+        "data/rudy/out/gpp_1000_10_3.dat-s",
+        "data/rudy/out/gpp_1000_10_4.dat-s",
+        "data/rudy/out/gpp_2000_10_1.dat-s",
+        "data/rudy/out/gpp_2000_10_2.dat-s",
+        "data/rudy/out/gpp_2000_10_3.dat-s",
+        "data/rudy/out/gpp_2000_10_4.dat-s",
+        "data/rudy/out/gpp_3000_10_1.dat-s",
+        "data/rudy/out/gpp_3000_10_2.dat-s",
+        "data/rudy/out/gpp_3000_10_3.dat-s",
+        "data/rudy/out/gpp_3000_10_4.dat-s",
+        "data/rudy/out/gpp_4000_10_1.dat-s",
+        "data/rudy/out/gpp_4000_10_2.dat-s",
+        "data/rudy/out/gpp_4000_10_3.dat-s",
+        "data/rudy/out/gpp_4000_10_4.dat-s",
+        "data/rudy/out/gpp_5000_10_1.dat-s",
+        "data/rudy/out/gpp_5000_10_2.dat-s",
+        "data/rudy/out/gpp_5000_10_3.dat-s",
+        "data/rudy/out/gpp_5000_10_4.dat-s",
+        "data/rudy/out/gpp_1000_15_1.dat-s",
+        "data/rudy/out/gpp_1000_15_2.dat-s",
+        "data/rudy/out/gpp_1000_15_3.dat-s",
+        "data/rudy/out/gpp_1000_15_4.dat-s",
+        "data/rudy/out/gpp_2000_15_1.dat-s",
+        "data/rudy/out/gpp_2000_15_2.dat-s",
+        "data/rudy/out/gpp_2000_15_3.dat-s",
+        "data/rudy/out/gpp_2000_15_4.dat-s",
+        "data/rudy/out/gpp_3000_15_1.dat-s",
+        "data/rudy/out/gpp_3000_15_2.dat-s",
+        "data/rudy/out/gpp_3000_15_3.dat-s",
+        "data/rudy/out/gpp_3000_15_4.dat-s",
+        "data/rudy/out/gpp_4000_15_1.dat-s",
+        "data/rudy/out/gpp_4000_15_2.dat-s",
+        "data/rudy/out/gpp_4000_15_3.dat-s",
+        "data/rudy/out/gpp_4000_15_4.dat-s",
+        "data/rudy/out/gpp_5000_15_1.dat-s",
+        "data/rudy/out/gpp_5000_15_2.dat-s",
+        "data/rudy/out/gpp_5000_15_3.dat-s",
+        "data/rudy/out/gpp_5000_15_4.dat-s",
+        "data/rudy/out/gpp_1000_20_1.dat-s",
+        "data/rudy/out/gpp_1000_20_2.dat-s",
+        "data/rudy/out/gpp_1000_20_3.dat-s",
+        "data/rudy/out/gpp_1000_20_4.dat-s",
+        "data/rudy/out/gpp_2000_20_1.dat-s",
+        "data/rudy/out/gpp_2000_20_2.dat-s",
+        "data/rudy/out/gpp_2000_20_3.dat-s",
+        "data/rudy/out/gpp_2000_20_4.dat-s",
+        "data/rudy/out/gpp_3000_20_1.dat-s",
+        "data/rudy/out/gpp_3000_20_2.dat-s",
+        "data/rudy/out/gpp_3000_20_3.dat-s",
+        "data/rudy/out/gpp_3000_20_4.dat-s",
+        "data/rudy/out/gpp_4000_20_1.dat-s",
+        "data/rudy/out/gpp_4000_20_2.dat-s",
+        "data/rudy/out/gpp_4000_20_3.dat-s",
+        "data/rudy/out/gpp_4000_20_4.dat-s",
+        "data/rudy/out/gpp_5000_20_1.dat-s",
+        "data/rudy/out/gpp_5000_20_2.dat-s",
+        "data/rudy/out/gpp_5000_20_3.dat-s",
+        "data/rudy/out/gpp_5000_20_4.dat-s",
     ]
 
     for problem_name in problem_names:
         for tol in [1e-2, 1e-3]:
+            print(f"solving {problem_name} with tol {tol}")
             res = run(problem_name, tol, 1e-3)
-            if (res["f_gap"][-1] <= 1e-3) and (res["g"][-1] <= 1e-3):
-                break;
+            if (
+                (tol == 1e-2)
+                and (res["f_gap"][-1] <= 1e-3)
+                and (res["g"][-1] <= 1e-3)
+            ):
+                print(
+                    f"skipping tol=1e-3 since tol=1e-2 was sufficient   f: {res['f_gap'][-1]}  g: {res['g'][-1]}"
+                )
+                break
 
 
 if __name__ == "__main__":
