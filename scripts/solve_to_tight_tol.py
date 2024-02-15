@@ -50,6 +50,8 @@ def run(data_dir):
         config = config_module.Config()
         config.tol = 1e-6
         config.feas_tol = 1e-6
+        config.log_to_stdout = 1
+        config.time_limit = 5 * 60 * 60
         with open(data_file_path, "r") as f:
             problem_data = sdpa.read("".join(f.readlines()).strip())
         res = mosek.run(problem_data, config)

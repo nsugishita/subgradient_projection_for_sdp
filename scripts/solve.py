@@ -231,6 +231,7 @@ def main():
     config.problem_name = args.problem
     config.tol = args.tol
     config.solver = args.solver
+    config.time_limit = 5 * 60 * 60
     if args.comb is not None:
         config.eigen_comb_cut = args.comb
     if args.linear is not None:
