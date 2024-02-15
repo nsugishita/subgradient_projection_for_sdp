@@ -17,6 +17,7 @@ will solve two SDP problems and create `mydata/foo/bar.txt` and
 
 import os
 import sys
+import random
 
 from cpsdppy import config as config_module
 from cpsdppy import sdpa
@@ -25,10 +26,23 @@ from cpsdppy.sdp_solvers import mosek
 
 def run(data_dir):
     updated = False
-    for file_name in sorted(os.listdir(data_dir)):
+
+    if os.path.isfile(data_dir):
+        files = [data_dir]
+        isfile = True
+    else:
+        files = list(os.listdir(data_dir))
+        isfile = False
+
+    random.shuffle(files)
+
+    for file_name in files:
         if not file_name.endswith(".dat-s"):
             continue
-        data_file_path = os.path.join(data_dir, file_name)
+        if isfile:
+            data_file_path = file_name
+        else:
+            data_file_path = os.path.join(data_dir, file_name)
         output_file_path = os.path.splitext(data_file_path)[0] + ".txt"
         if os.path.exists(output_file_path):
             continue
