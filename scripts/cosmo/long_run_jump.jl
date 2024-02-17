@@ -197,7 +197,7 @@ for input_file_path in input_file_paths
     problem_name = split(split(input_file_path, "/")[end], ".")[1];
     println("+++ problem: $(problem_name)");
     output_file_path = "outputs/v2/cosmo/long_run_jump/$(problem_name).txt";
-    res = run_cosmo(input_file_path, problem_name, 20 * 60.0, true);
+    res = run_cosmo(input_file_path, problem_name, 60.0 * 60.0, true);
     io = open(output_file_path, "w");
     for (key, value) in res
         write(io, "$(key): $(value)\n");
