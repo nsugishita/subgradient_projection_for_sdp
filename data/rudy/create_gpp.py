@@ -42,9 +42,9 @@ def convert(text):
     out += "1\n"
     out += str(size) + "\n"
     out += "{"
+    out += "+0.0"
     for i in range(size):
-        if i > 0:
-            out += ","
+        out += ","
         out += "+1.0"
     out += "}\n"
 
