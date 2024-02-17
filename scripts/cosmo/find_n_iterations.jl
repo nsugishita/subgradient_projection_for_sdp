@@ -128,10 +128,10 @@ function extract_solver_results_jump(input_file_path, problem_name, model, x)
 end
 
 function find_n_iterations(input_file_path, problem_name, tol, feas_tol, n_iterations, full)
-    lb = 0
-    ub = n_iterations
+    lb = 0;
+    ub = n_iterations;
 
-    model, x = build_model(input_file_path)
+    model, x = build_model(input_file_path);
 
     while ub - lb > 2
         n_iterations = trunc(Int, 0.5 * (lb + ub));
@@ -171,6 +171,30 @@ function find_n_iterations(input_file_path, problem_name, tol, feas_tol, n_itera
 
         @printf(
             "%15s  mode: 2  it: %4d  t: %6.1f  f: %8.5f  g: %8.5f\n",
+            problem_name, n_iterations, res["walltime"], res["f_gap"], res["g"]
+        )
+
+        if (res["f_gap"] <= tol) && (res["g"] <= feas_tol)
+            break
+        end
+        n_iterations += 25;
+    end
+
+    n_iterations -= 24;
+
+    while true
+        JuMP.set_optimizer(model, COSMO.Optimizer);
+        set_attribute(model, "max_iter", n_iterations);
+        set_attribute(model, "eps_rel", 0.0);
+        set_attribute(model, "eps_abs", 0.0);
+        set_attribute(model, "eps_prim_inf", 0.0);
+        set_attribute(model, "eps_dual_inf", 0.0);
+        set_attribute(model, "verbose", false);
+        JuMP.optimize!(model);
+        res = extract_solver_results_jump(input_file_path, problem_name, model, x);
+
+        @printf(
+            "%15s  mode: 3  it: %4d  t: %6.1f  f: %8.5f  g: %8.5f\n",
             problem_name, n_iterations, res["walltime"], res["f_gap"], res["g"]
         )
 
@@ -297,14 +321,20 @@ for input_file_path in input_file_paths
         n_iterations = long_run["n_iterations"]
         println("+++ problem: $(problem_name)  tol: $(tol)  ub on n_iterations: $(n_iterations)");
         output_file_path = "outputs/v2/cosmo/find_n_iterations/$(problem_name)_tol_$(tol).txt";
-        res = find_n_iterations(input_file_path, problem_name, tol, 1e-3, n_iterations, true);
-        io = open(output_file_path, "w");
-        for (key, value) in res
-            write(io, "$(key): $(value)\n");
-            println("$(key): $(value)");
+        if isfile(output_file_path)
+            println("result file found");
+        else
+            res = find_n_iterations(input_file_path, problem_name, tol, 1e-3, n_iterations, true);
+            io = open(output_file_path, "w");
+            for (key, value) in res
+                write(io, "$(key): $(value)\n");
+                println("$(key): $(value)");
+            end
+            close(io);
         end
-        close(io);
-        if res["f_gap"] <= 1e-3
+        res = YAML.load_file(output_file_path)
+        if (tol == 1e-2) && (res["f_gap"] <= 1e-3) && (res["g"] <= 1e-3)
+            println("skipping tol=1e-3 since tol=1e-2 gave the same result");
             #  We found the number of iterations to achieve the tightest tol.
             break
         end
