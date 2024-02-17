@@ -2,15 +2,15 @@
 
 """Run commands in a given file in parallel"""
 
+import random
 import multiprocessing as mp
 import os
+import argparse
 import subprocess
 import sys
 
-n_workers = 4
 
-
-def worker(path, worker_index, lock):
+def worker(path, worker_index, lock, shuffle):
     iteration_index = -1
 
     env = os.environ.copy()
@@ -24,7 +24,20 @@ def worker(path, worker_index, lock):
                 if not read:
                     return
                 lines = read.split("\n")
-            line = lines[0]
+            if shuffle:
+                random.shuffle(lines)
+            # Find the first non-empty line with any first character except '#'.
+            found = False
+            while True:
+                if not lines:
+                    break
+                line = lines[0].strip()
+                if line and line[0] != "#":
+                    found = True
+                    break
+                lines = lines[1:]
+            if not found:
+                break
             with open(path, "w") as f:
                 for x in lines[1:]:
                     f.write(x + "\n")
@@ -35,17 +48,17 @@ def worker(path, worker_index, lock):
 
 def main():
     """Run the main routine of this script"""
-    if len(sys.argv) != 2:
-        print(f"usage: python {sys.argv[0]} FILE")
-        return
-
-    path = sys.argv[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("path", help="path to a file with commands")
+    parser.add_argument("--n", type=int, default=4, help="number of processes")
+    parser.add_argument("--shuffle", action="store_true", help="shuffle commands")
+    args = parser.parse_args()
 
     lock = mp.Lock()
     processes = []
 
-    for worker_index in range(n_workers):
-        process = mp.Process(target=worker, args=(path, worker_index, lock))
+    for worker_index in range(args.n):
+        process = mp.Process(target=worker, args=(args.path, worker_index, lock, args.shuffle))
         processes.append(process)
         process.start()
 
