@@ -16,7 +16,7 @@ def main():
     parser.add_argument(
         "--solver",
         type=str,
-        choices=["subgradient_projection", "mosek", "cosmo"],
+        choices=["subgradient_projection", "mosek", "cosmo", "sdpnal"],
         required=True,
     )
     parser.add_argument(
@@ -54,6 +54,13 @@ def main():
         command = (
             ". ./scripts/activate.sh && julia --project=juliaenv "
             f"scripts/internal/run_cosmo.jl {args.problem}"
+        )
+        subprocess.run(command, shell=True, check=True)
+
+    elif args.solver == "sdpnal":
+        command = (
+            ". ./scripts/activate.sh && python scripts/internal/sdpnal/run.py "
+            + args.problem
         )
         subprocess.run(command, shell=True, check=True)
     else:

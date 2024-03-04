@@ -17,6 +17,7 @@ echo "downloading SDPLIB instances"
 pushd data >/dev/null
 ./download_sdplib.sh >/dev/null
 popd >/dev/null
+python scripts/internal/populate_optimal_objective_values_of_sdplib.py
 
 echo "building C++ extensions"
 

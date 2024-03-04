@@ -7,3 +7,13 @@ Then, use the following command from the top of the project.
 ```
 bash data/rudy/create_problem_data.sh
 ```
+
+To run the subgradient projection method, we need the optimal objective values.
+This can be done by
+
+```
+python scripts/internal/solve_to_tight_tol.py data/rudy/out
+```
+
+which solve all the test instances in `data/rudy/out` and save the optimal
+objective values in the same directory.

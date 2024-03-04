@@ -46,7 +46,7 @@ def run(data_file_path, tol, feas_tol):
     # Find ub
     while True:
         command = (
-            f"bash scripts/sdpnal/interface.sh {data_file_path} "
+            f"bash scripts/internal/sdpnal/interface.sh {data_file_path} "
             f"{iteration_limit} {solution_path}"
         )
         res = subprocess.run(
@@ -84,7 +84,7 @@ def run(data_file_path, tol, feas_tol):
     while True:
         iteration_limit = int((lb + ub) / 2)
         command = (
-            f"bash scripts/sdpnal/interface.sh {data_file_path} "
+            f"bash scripts/internal/sdpnal/interface.sh {data_file_path} "
             f"{iteration_limit} {solution_path}"
         )
         res = subprocess.run(
@@ -136,7 +136,7 @@ def run(data_file_path, tol, feas_tol):
 
     while True:
         command = (
-            f"bash scripts/sdpnal/interface.sh {data_file_path} "
+            f"bash scripts/internal/sdpnal/interface.sh {data_file_path} "
             f"{iteration_limit} {solution_path}"
         )
         res = subprocess.run(
