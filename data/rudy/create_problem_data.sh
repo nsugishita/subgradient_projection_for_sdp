@@ -6,7 +6,7 @@
 # bash data/rudy/create_problem_data.sh
 # ```
 
-mkdir -p out
+mkdir -p data/rudy/out
 
 for density in 5 10 15 20 ; do
     for size in 1000 2000 3000 4000 5000 ; do
