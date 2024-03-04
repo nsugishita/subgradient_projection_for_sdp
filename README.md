@@ -51,14 +51,10 @@ Typically the following script will handle these.
 ```
 
 Now, we are ready to run the program.
-We can solve a simple 2D example:
+
+To solve `mcp100.dat-s`:
 
 ```
-python ./examples/solve_simple_2d_problem.py
-```
-
-or run the evaluation:
-
-```
-python ./examples/run_experiments.py
+python scripts/solve.py --problem data/SDPLIB/data/mcp100.dat-s --tol 1e-3 \
+    --solver subgradient_projection
 ```
