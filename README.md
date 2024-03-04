@@ -58,3 +58,9 @@ To solve `mcp100.dat-s`:
 python scripts/solve.py --problem data/SDPLIB/data/mcp100.dat-s --tol 1e-3 \
     --solver subgradient_projection
 ```
+
+To run all the experiments:
+
+```
+bash scripts/run_all.sh
+```

@@ -34,46 +34,46 @@ input_file_paths1 = [
 ]
 
 input_file_paths2 = [
-    "data/rudy/out/graph_1000_5_1.dat-s",
-    "data/rudy/out/graph_1000_5_2.dat-s",
-    "data/rudy/out/graph_1000_5_3.dat-s",
-    "data/rudy/out/graph_1000_5_4.dat-s",
-    "data/rudy/out/graph_2000_5_1.dat-s",
-    "data/rudy/out/graph_2000_5_2.dat-s",
-    "data/rudy/out/graph_2000_5_3.dat-s",
-    "data/rudy/out/graph_2000_5_4.dat-s",
-    "data/rudy/out/graph_3000_5_1.dat-s",
-    "data/rudy/out/graph_3000_5_2.dat-s",
-    "data/rudy/out/graph_3000_5_3.dat-s",
-    "data/rudy/out/graph_3000_5_4.dat-s",
-    "data/rudy/out/graph_4000_5_1.dat-s",
-    "data/rudy/out/graph_4000_5_2.dat-s",
-    "data/rudy/out/graph_4000_5_3.dat-s",
-    "data/rudy/out/graph_4000_5_4.dat-s",
-    "data/rudy/out/graph_5000_5_1.dat-s",
-    "data/rudy/out/graph_5000_5_2.dat-s",
-    "data/rudy/out/graph_5000_5_3.dat-s",
-    "data/rudy/out/graph_5000_5_4.dat-s",
-    "data/rudy/out/graph_1000_10_1.dat-s",
-    "data/rudy/out/graph_1000_10_2.dat-s",
-    "data/rudy/out/graph_1000_10_3.dat-s",
-    "data/rudy/out/graph_1000_10_4.dat-s",
-    "data/rudy/out/graph_2000_10_1.dat-s",
-    "data/rudy/out/graph_2000_10_2.dat-s",
-    "data/rudy/out/graph_2000_10_3.dat-s",
-    "data/rudy/out/graph_2000_10_4.dat-s",
-    "data/rudy/out/graph_3000_10_1.dat-s",
-    "data/rudy/out/graph_3000_10_2.dat-s",
-    "data/rudy/out/graph_3000_10_3.dat-s",
-    "data/rudy/out/graph_3000_10_4.dat-s",
-    "data/rudy/out/graph_4000_10_1.dat-s",
-    "data/rudy/out/graph_4000_10_2.dat-s",
-    "data/rudy/out/graph_4000_10_3.dat-s",
-    "data/rudy/out/graph_4000_10_4.dat-s",
-    "data/rudy/out/graph_5000_10_1.dat-s",
-    "data/rudy/out/graph_5000_10_2.dat-s",
-    "data/rudy/out/graph_5000_10_3.dat-s",
-    "data/rudy/out/graph_5000_10_4.dat-s",
+    "data/rudy/out/mcp_1000_5_1.dat-s",
+    "data/rudy/out/mcp_1000_5_2.dat-s",
+    "data/rudy/out/mcp_1000_5_3.dat-s",
+    "data/rudy/out/mcp_1000_5_4.dat-s",
+    "data/rudy/out/mcp_2000_5_1.dat-s",
+    "data/rudy/out/mcp_2000_5_2.dat-s",
+    "data/rudy/out/mcp_2000_5_3.dat-s",
+    "data/rudy/out/mcp_2000_5_4.dat-s",
+    "data/rudy/out/mcp_3000_5_1.dat-s",
+    "data/rudy/out/mcp_3000_5_2.dat-s",
+    "data/rudy/out/mcp_3000_5_3.dat-s",
+    "data/rudy/out/mcp_3000_5_4.dat-s",
+    "data/rudy/out/mcp_4000_5_1.dat-s",
+    "data/rudy/out/mcp_4000_5_2.dat-s",
+    "data/rudy/out/mcp_4000_5_3.dat-s",
+    "data/rudy/out/mcp_4000_5_4.dat-s",
+    "data/rudy/out/mcp_5000_5_1.dat-s",
+    "data/rudy/out/mcp_5000_5_2.dat-s",
+    "data/rudy/out/mcp_5000_5_3.dat-s",
+    "data/rudy/out/mcp_5000_5_4.dat-s",
+    "data/rudy/out/mcp_1000_10_1.dat-s",
+    "data/rudy/out/mcp_1000_10_2.dat-s",
+    "data/rudy/out/mcp_1000_10_3.dat-s",
+    "data/rudy/out/mcp_1000_10_4.dat-s",
+    "data/rudy/out/mcp_2000_10_1.dat-s",
+    "data/rudy/out/mcp_2000_10_2.dat-s",
+    "data/rudy/out/mcp_2000_10_3.dat-s",
+    "data/rudy/out/mcp_2000_10_4.dat-s",
+    "data/rudy/out/mcp_3000_10_1.dat-s",
+    "data/rudy/out/mcp_3000_10_2.dat-s",
+    "data/rudy/out/mcp_3000_10_3.dat-s",
+    "data/rudy/out/mcp_3000_10_4.dat-s",
+    "data/rudy/out/mcp_4000_10_1.dat-s",
+    "data/rudy/out/mcp_4000_10_2.dat-s",
+    "data/rudy/out/mcp_4000_10_3.dat-s",
+    "data/rudy/out/mcp_4000_10_4.dat-s",
+    "data/rudy/out/mcp_5000_10_1.dat-s",
+    "data/rudy/out/mcp_5000_10_2.dat-s",
+    "data/rudy/out/mcp_5000_10_3.dat-s",
+    "data/rudy/out/mcp_5000_10_4.dat-s",
     "data/rudy/out/gpp_1000_5_1.dat-s",
     "data/rudy/out/gpp_1000_5_2.dat-s",
     "data/rudy/out/gpp_1000_5_3.dat-s",
@@ -139,7 +139,7 @@ def main():
             for tol_i, tol in enumerate([1e-2, 1e-3]):
                 values = []
                 for n_linear_cuts, eigen_comb_cut in [(1, 0), (0, 1), (1, 1)]:
-                    output_file_path = f"outputs/v2/subgradient_projection/{problem_name}_tol_{tol}_comb_{eigen_comb_cut}_linear_{n_linear_cuts}.pkl"
+                    output_file_path = f"outputs/v3/subgradient_projection/{problem_name}_tol_{tol}_comb_{eigen_comb_cut}_linear_{n_linear_cuts}.pkl"
                     with open(output_file_path, "rb") as f:
                         res = pickle.load(f)
                     values.append(res[item])
@@ -179,7 +179,7 @@ def main():
                     print(x + " ", end="")
             print("\\\\")
 
-    for problem_name in ["gpp", "graph"]:
+    for problem_name in ["gpp", "mcp"]:
         print(f"problem: {problem_name}")
         # print(f"{'':>6s} ", end="")
         # print(f" {sep} ", end="")
@@ -236,27 +236,14 @@ def load_walltime(input_file_path, tol, solver, item="walltime"):
             return load_walltime(input_file_path, 1e-2, solver, item)
     if solver in ["subgradient_projection", "mosek"]:
         problem_name = os.path.splitext(os.path.basename(input_file_path))[0]
-        output_file_path = f"outputs/v2/{solver}/{problem_name}_tol_{tol}_comb_1_linear_0.pkl"
-        if not os.path.isfile(output_file_path):
-            output_file_path = f"outputs/v2/{solver}/{problem_name}_tol_{tol}_comb_1_linear_1.pkl"
+        output_file_path = f"outputs/v3/{solver}/{problem_name}_tol_{tol}_comb_1_linear_0.pkl"
         with open(output_file_path, "rb") as f:
             res = pickle.load(f)
         return res[item]
-    if solver == "cosmon":
-        while True:
-            problem_name = os.path.splitext(os.path.basename(input_file_path))[0]
-            output_file_path = f"outputs/v2/cosmo/find_n_iterations2/{problem_name}_tol_{tol}.txt"
-            if os.path.exists(output_file_path):
-                with open(output_file_path, "r") as f:
-                    res = yaml.safe_load(f)
-                return res[item]
-            if tol >= 1e-1:
-                return np.nan
-            tol *= 10
     if solver == "cosmo":
         try:
             problem_name = os.path.splitext(os.path.basename(input_file_path))[0]
-            output_file_path = f"outputs/v2/cosmo_jump_original/{problem_name}_tol_{tol}.txt"
+            output_file_path = f"outputs/v3/cosmo/{problem_name}_tol_{tol}.txt"
             with open(output_file_path, "r") as f:
                 res = yaml.safe_load(f)
             return res[item]
@@ -264,7 +251,7 @@ def load_walltime(input_file_path, tol, solver, item="walltime"):
             return np.nan
     if solver == "sdpnal":
         problem_name = os.path.splitext(os.path.basename(input_file_path))[0]
-        output_file_path = f"outputs/v2/sdpnal/{problem_name}_{tol}_0.001.npz"
+        output_file_path = f"outputs/v3/sdpnal/{problem_name}_{tol}_0.001.npz"
         res = np.load(output_file_path)
         return res[item][-1]
 
