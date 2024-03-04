@@ -10,4 +10,4 @@ set -e
 
 JULIA=bin/julia
 
-$JULIA --project=juliaenv -e "import Pkg; Pkg.add([\"FileIO\", \"JLD2\", \"COSMO\", \"JuMP\", \"JSON\"])"
+$JULIA --project=juliaenv -e "import Pkg; Pkg.add([\"COSMO\", \"JuMP\"])"
