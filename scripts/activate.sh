@@ -9,6 +9,7 @@ export PYTHONPATH="$PYTHONPATH":"$(pwd)/extensions/uniquelist/build"
 export PREFIX="$HOME/local/default"
 export OMP_NUM_THREADS=1
 
-module load gurobi
+module load gurobi >/dev/null 2>&1 || true
+module load julia >/dev/null  2>&1|| true
 
 . ./env/bin/activate

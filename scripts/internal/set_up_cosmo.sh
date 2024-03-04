@@ -4,7 +4,7 @@
 #
 # To run the script, type the following in the top directory.
 #
-# $ ./scripts/setup_cosmo.sh
+# $ ./scripts/internal/setup_cosmo.sh
 
 set -e
 

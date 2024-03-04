@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Build extensions. Call this script from the top directory of the project.
-# . ./scripts/build.sh
+# . ./scripts/internal/build.sh
 
 set -e
 
