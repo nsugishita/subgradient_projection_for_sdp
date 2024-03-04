@@ -11,5 +11,6 @@ export OMP_NUM_THREADS=1
 
 module load gurobi >/dev/null 2>&1 || true
 module load julia >/dev/null  2>&1|| true
+module load matlab >/dev/null  2>&1|| true
 
 . ./env/bin/activate

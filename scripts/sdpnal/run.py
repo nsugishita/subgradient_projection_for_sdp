@@ -1,7 +1,14 @@
 # -*- coding: utf-8 -*-
 
-"""Run SDPNAL+ on test instances"""
+"""Run SDPNAL+
 
+This runs SDPNAL+ on a specified SDPLIB instance.
+Since we do not know how many iterations we need to run unti we find a solution
+satisfying the terminal conditions, we run SDPNAL+ repeatedly with various
+number of iterations, until we find the required number of iterations.
+"""
+
+import sys
 import os
 import subprocess
 
@@ -16,16 +23,20 @@ def run(data_file_path, tol, feas_tol):
     cwd = os.getcwd()
     problem_name = os.path.splitext(os.path.basename(data_file_path))[0]
     output_file_name = (
-        f"outputs/v2/sdpnal2/{problem_name}_{tol}_{feas_tol}.npz"
+        f"outputs/v3/sdpnal/{problem_name}_{tol}_{feas_tol}.npz"
     )
 
     if os.path.exists(output_file_name):
         return np.load(output_file_name)
 
+    output_dir = os.path.dirname(output_file_name)
+
     solution_path = (
-        f"{cwd}/outputs/v2/sdpnal2/"
+        f"{cwd}/{output_dir}/"
         f"{problem_name}_{tol}_{feas_tol}_tmp_sol.txt"
     )
+
+    os.makedirs(output_dir, exist_ok=True)
 
     iteration_limit = 100
 
@@ -172,186 +183,7 @@ def run(data_file_path, tol, feas_tol):
 
 def main():
     """Run the main routine of this script"""
-    problem_names = [
-        "data/SDPLIB/data/gpp250-1.dat-s",
-        "data/SDPLIB/data/gpp250-2.dat-s",
-        "data/SDPLIB/data/gpp250-3.dat-s",
-        "data/SDPLIB/data/gpp250-4.dat-s",
-        "data/SDPLIB/data/gpp500-1.dat-s",
-        "data/SDPLIB/data/gpp500-2.dat-s",
-        "data/SDPLIB/data/gpp500-3.dat-s",
-        "data/SDPLIB/data/gpp500-4.dat-s",
-        "data/SDPLIB/data/mcp250-1.dat-s",
-        "data/SDPLIB/data/mcp250-2.dat-s",
-        "data/SDPLIB/data/mcp250-3.dat-s",
-        "data/SDPLIB/data/mcp250-4.dat-s",
-        "data/SDPLIB/data/mcp500-1.dat-s",
-        "data/SDPLIB/data/mcp500-2.dat-s",
-        "data/SDPLIB/data/mcp500-3.dat-s",
-        "data/SDPLIB/data/mcp500-4.dat-s",
-        "data/rudy/out/graph_1000_5_1.dat-s",
-        "data/rudy/out/graph_1000_5_2.dat-s",
-        "data/rudy/out/graph_1000_5_3.dat-s",
-        "data/rudy/out/graph_1000_5_4.dat-s",
-        "data/rudy/out/graph_2000_5_1.dat-s",
-        "data/rudy/out/graph_2000_5_2.dat-s",
-        "data/rudy/out/graph_2000_5_3.dat-s",
-        "data/rudy/out/graph_2000_5_4.dat-s",
-        "data/rudy/out/graph_3000_5_1.dat-s",
-        "data/rudy/out/graph_3000_5_2.dat-s",
-        "data/rudy/out/graph_3000_5_3.dat-s",
-        "data/rudy/out/graph_3000_5_4.dat-s",
-        "data/rudy/out/graph_4000_5_1.dat-s",
-        "data/rudy/out/graph_4000_5_2.dat-s",
-        "data/rudy/out/graph_4000_5_3.dat-s",
-        "data/rudy/out/graph_4000_5_4.dat-s",
-        "data/rudy/out/graph_5000_5_1.dat-s",
-        "data/rudy/out/graph_5000_5_2.dat-s",
-        "data/rudy/out/graph_5000_5_3.dat-s",
-        "data/rudy/out/graph_5000_5_4.dat-s",
-        "data/rudy/out/graph_1000_10_1.dat-s",
-        "data/rudy/out/graph_1000_10_2.dat-s",
-        "data/rudy/out/graph_1000_10_3.dat-s",
-        "data/rudy/out/graph_1000_10_4.dat-s",
-        "data/rudy/out/graph_2000_10_1.dat-s",
-        "data/rudy/out/graph_2000_10_2.dat-s",
-        "data/rudy/out/graph_2000_10_3.dat-s",
-        "data/rudy/out/graph_2000_10_4.dat-s",
-        "data/rudy/out/graph_3000_10_1.dat-s",
-        "data/rudy/out/graph_3000_10_2.dat-s",
-        "data/rudy/out/graph_3000_10_3.dat-s",
-        "data/rudy/out/graph_3000_10_4.dat-s",
-        "data/rudy/out/graph_4000_10_1.dat-s",
-        "data/rudy/out/graph_4000_10_2.dat-s",
-        "data/rudy/out/graph_4000_10_3.dat-s",
-        "data/rudy/out/graph_4000_10_4.dat-s",
-        "data/rudy/out/graph_5000_10_1.dat-s",
-        "data/rudy/out/graph_5000_10_2.dat-s",
-        "data/rudy/out/graph_5000_10_3.dat-s",
-        "data/rudy/out/graph_5000_10_4.dat-s",
-        "data/rudy/out/graph_1000_15_1.dat-s",
-        "data/rudy/out/graph_1000_15_2.dat-s",
-        "data/rudy/out/graph_1000_15_3.dat-s",
-        "data/rudy/out/graph_1000_15_4.dat-s",
-        "data/rudy/out/graph_2000_15_1.dat-s",
-        "data/rudy/out/graph_2000_15_2.dat-s",
-        "data/rudy/out/graph_2000_15_3.dat-s",
-        "data/rudy/out/graph_2000_15_4.dat-s",
-        "data/rudy/out/graph_3000_15_1.dat-s",
-        "data/rudy/out/graph_3000_15_2.dat-s",
-        "data/rudy/out/graph_3000_15_3.dat-s",
-        "data/rudy/out/graph_3000_15_4.dat-s",
-        "data/rudy/out/graph_4000_15_1.dat-s",
-        "data/rudy/out/graph_4000_15_2.dat-s",
-        "data/rudy/out/graph_4000_15_3.dat-s",
-        "data/rudy/out/graph_4000_15_4.dat-s",
-        "data/rudy/out/graph_5000_15_1.dat-s",
-        "data/rudy/out/graph_5000_15_2.dat-s",
-        "data/rudy/out/graph_5000_15_3.dat-s",
-        "data/rudy/out/graph_5000_15_4.dat-s",
-        "data/rudy/out/graph_1000_20_1.dat-s",
-        "data/rudy/out/graph_1000_20_2.dat-s",
-        "data/rudy/out/graph_1000_20_3.dat-s",
-        "data/rudy/out/graph_1000_20_4.dat-s",
-        "data/rudy/out/graph_2000_20_1.dat-s",
-        "data/rudy/out/graph_2000_20_2.dat-s",
-        "data/rudy/out/graph_2000_20_3.dat-s",
-        "data/rudy/out/graph_2000_20_4.dat-s",
-        "data/rudy/out/graph_3000_20_1.dat-s",
-        "data/rudy/out/graph_3000_20_2.dat-s",
-        "data/rudy/out/graph_3000_20_3.dat-s",
-        "data/rudy/out/graph_3000_20_4.dat-s",
-        "data/rudy/out/graph_4000_20_1.dat-s",
-        "data/rudy/out/graph_4000_20_2.dat-s",
-        "data/rudy/out/graph_4000_20_3.dat-s",
-        "data/rudy/out/graph_4000_20_4.dat-s",
-        "data/rudy/out/graph_5000_20_1.dat-s",
-        "data/rudy/out/graph_5000_20_2.dat-s",
-        "data/rudy/out/graph_5000_20_3.dat-s",
-        "data/rudy/out/graph_5000_20_4.dat-s",
-        "data/rudy/out/gpp_1000_5_1.dat-s",
-        "data/rudy/out/gpp_1000_5_2.dat-s",
-        "data/rudy/out/gpp_1000_5_3.dat-s",
-        "data/rudy/out/gpp_1000_5_4.dat-s",
-        "data/rudy/out/gpp_2000_5_1.dat-s",
-        "data/rudy/out/gpp_2000_5_2.dat-s",
-        "data/rudy/out/gpp_2000_5_3.dat-s",
-        "data/rudy/out/gpp_2000_5_4.dat-s",
-        "data/rudy/out/gpp_3000_5_1.dat-s",
-        "data/rudy/out/gpp_3000_5_2.dat-s",
-        "data/rudy/out/gpp_3000_5_3.dat-s",
-        "data/rudy/out/gpp_3000_5_4.dat-s",
-        "data/rudy/out/gpp_4000_5_1.dat-s",
-        "data/rudy/out/gpp_4000_5_2.dat-s",
-        "data/rudy/out/gpp_4000_5_3.dat-s",
-        "data/rudy/out/gpp_4000_5_4.dat-s",
-        "data/rudy/out/gpp_5000_5_1.dat-s",
-        "data/rudy/out/gpp_5000_5_2.dat-s",
-        "data/rudy/out/gpp_5000_5_3.dat-s",
-        "data/rudy/out/gpp_5000_5_4.dat-s",
-        "data/rudy/out/gpp_1000_10_1.dat-s",
-        "data/rudy/out/gpp_1000_10_2.dat-s",
-        "data/rudy/out/gpp_1000_10_3.dat-s",
-        "data/rudy/out/gpp_1000_10_4.dat-s",
-        "data/rudy/out/gpp_2000_10_1.dat-s",
-        "data/rudy/out/gpp_2000_10_2.dat-s",
-        "data/rudy/out/gpp_2000_10_3.dat-s",
-        "data/rudy/out/gpp_2000_10_4.dat-s",
-        "data/rudy/out/gpp_3000_10_1.dat-s",
-        "data/rudy/out/gpp_3000_10_2.dat-s",
-        "data/rudy/out/gpp_3000_10_3.dat-s",
-        "data/rudy/out/gpp_3000_10_4.dat-s",
-        "data/rudy/out/gpp_4000_10_1.dat-s",
-        "data/rudy/out/gpp_4000_10_2.dat-s",
-        "data/rudy/out/gpp_4000_10_3.dat-s",
-        "data/rudy/out/gpp_4000_10_4.dat-s",
-        "data/rudy/out/gpp_5000_10_1.dat-s",
-        "data/rudy/out/gpp_5000_10_2.dat-s",
-        "data/rudy/out/gpp_5000_10_3.dat-s",
-        "data/rudy/out/gpp_5000_10_4.dat-s",
-        "data/rudy/out/gpp_1000_15_1.dat-s",
-        "data/rudy/out/gpp_1000_15_2.dat-s",
-        "data/rudy/out/gpp_1000_15_3.dat-s",
-        "data/rudy/out/gpp_1000_15_4.dat-s",
-        "data/rudy/out/gpp_2000_15_1.dat-s",
-        "data/rudy/out/gpp_2000_15_2.dat-s",
-        "data/rudy/out/gpp_2000_15_3.dat-s",
-        "data/rudy/out/gpp_2000_15_4.dat-s",
-        "data/rudy/out/gpp_3000_15_1.dat-s",
-        "data/rudy/out/gpp_3000_15_2.dat-s",
-        "data/rudy/out/gpp_3000_15_3.dat-s",
-        "data/rudy/out/gpp_3000_15_4.dat-s",
-        "data/rudy/out/gpp_4000_15_1.dat-s",
-        "data/rudy/out/gpp_4000_15_2.dat-s",
-        "data/rudy/out/gpp_4000_15_3.dat-s",
-        "data/rudy/out/gpp_4000_15_4.dat-s",
-        "data/rudy/out/gpp_5000_15_1.dat-s",
-        "data/rudy/out/gpp_5000_15_2.dat-s",
-        "data/rudy/out/gpp_5000_15_3.dat-s",
-        "data/rudy/out/gpp_5000_15_4.dat-s",
-        "data/rudy/out/gpp_1000_20_1.dat-s",
-        "data/rudy/out/gpp_1000_20_2.dat-s",
-        "data/rudy/out/gpp_1000_20_3.dat-s",
-        "data/rudy/out/gpp_1000_20_4.dat-s",
-        "data/rudy/out/gpp_2000_20_1.dat-s",
-        "data/rudy/out/gpp_2000_20_2.dat-s",
-        "data/rudy/out/gpp_2000_20_3.dat-s",
-        "data/rudy/out/gpp_2000_20_4.dat-s",
-        "data/rudy/out/gpp_3000_20_1.dat-s",
-        "data/rudy/out/gpp_3000_20_2.dat-s",
-        "data/rudy/out/gpp_3000_20_3.dat-s",
-        "data/rudy/out/gpp_3000_20_4.dat-s",
-        "data/rudy/out/gpp_4000_20_1.dat-s",
-        "data/rudy/out/gpp_4000_20_2.dat-s",
-        "data/rudy/out/gpp_4000_20_3.dat-s",
-        "data/rudy/out/gpp_4000_20_4.dat-s",
-        "data/rudy/out/gpp_5000_20_1.dat-s",
-        "data/rudy/out/gpp_5000_20_2.dat-s",
-        "data/rudy/out/gpp_5000_20_3.dat-s",
-        "data/rudy/out/gpp_5000_20_4.dat-s",
-    ]
-
-    for problem_name in problem_names:
+    for problem_name in sys.argv[1:]:
         for tol in [1e-2, 1e-3]:
             print(f"solving {problem_name} with tol {tol}")
             res = run(problem_name, tol, 1e-3)
