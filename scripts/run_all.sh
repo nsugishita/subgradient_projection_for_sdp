@@ -62,38 +62,102 @@
 . ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-2.dat-s --solver mosek --tol 1e-2 --comb 1 --linear 0
 . ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-3.dat-s --solver mosek --tol 1e-2 --comb 1 --linear 0
 . ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-4.dat-s --solver mosek --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-1.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-2.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-3.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-4.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-1.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-2.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-3.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-4.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-1.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-2.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-3.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-4.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-1.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-2.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-3.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-4.dat-s --solver cosmo --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-1.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-2.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-3.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-4.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-1.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-2.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-3.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-4.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-1.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-2.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-3.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-4.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-1.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-2.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-3.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
-. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-4.dat-s --solver sdpnal --tol 1e-2 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-1.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-2.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-3.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-4.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-1.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-2.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-3.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-4.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-1.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-2.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-3.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-4.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-1.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-2.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-3.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-4.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-1.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-2.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-3.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-4.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-1.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-2.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-3.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-4.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-1.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-2.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-3.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-4.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-1.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-2.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-3.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-4.dat-s --solver subgradient_projection --tol 1e-3 --comb 0 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-1.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-2.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-3.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-4.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-1.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-2.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-3.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-4.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-1.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-2.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-3.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-4.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-1.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-2.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-3.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-4.dat-s --solver subgradient_projection --tol 1e-3 --comb 1 --linear 1
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-1.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-2.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-3.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-4.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-1.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-2.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-3.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-4.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-1.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-2.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-3.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-4.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-1.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-2.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-3.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-4.dat-s --solver mosek --tol 1e-3 --comb 1 --linear 0
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-1.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-2.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-3.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-4.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-1.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-2.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-3.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-4.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-1.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-2.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-3.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-4.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-1.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-2.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-3.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-4.dat-s --solver cosmo
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-1.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-2.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-3.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp250-4.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-1.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-2.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-3.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/mcp500-4.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-1.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-2.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-3.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp250-4.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-1.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-2.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-3.dat-s --solver sdpnal
+. ./scripts/activate.sh && python scripts/solve.py --problem data/SDPLIB/data/gpp500-4.dat-s --solver sdpnal
 . ./scripts/activate.sh && python scripts/solve.py --problem data/rudy/out/gpp_1000_5_1.dat-s --tol 0.01 --solver subgradient_projection --comb 1 --linear 0
 . ./scripts/activate.sh && python scripts/solve.py --problem data/rudy/out/gpp_1000_5_1.dat-s --tol 0.001 --solver subgradient_projection --comb 1 --linear 0
 . ./scripts/activate.sh && python scripts/solve.py --problem data/rudy/out/gpp_1000_5_2.dat-s --tol 0.01 --solver subgradient_projection --comb 1 --linear 0
