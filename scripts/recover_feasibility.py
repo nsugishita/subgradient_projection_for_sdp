@@ -21,10 +21,10 @@ def run(input_file_path, config, loaded_file_path, output_file_path):
     """Run the solver on the current process"""
     if not os.path.exists(loaded_file_path):
         print(f"file not found: {loaded_file_path}")
-        raise SystemExit(1)
+        return
     if os.path.exists(output_file_path):
         print(f"file already exists: {output_file_path}")
-        raise SystemExit(1)
+        return
 
     os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
     log_file_path = os.path.splitext(output_file_path)[0] + ".txt"
@@ -110,7 +110,7 @@ def _impl(args):
         f"linear_{config.n_linear_cuts}.pkl"
     )
     output_file_path = (
-        f"outputs/vdev/{config.solver}/{problem_name}_"
+        f"outputs/vfeas/{config.solver}/{problem_name}_"
         f"tol_{config.tol}_comb_{config.eigen_comb_cut}_"
         f"linear_{config.n_linear_cuts}_feasibility_recovery.pkl"
     )
