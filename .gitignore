@@ -13,3 +13,4 @@ outputs
 out
 vimquickrun.sh
 .DS_store
+dist
