@@ -58,6 +58,9 @@ class Config(config_utils.BaseConfig):
 
         self.add_cuts_after_optimality_step: int = 1
 
+        # If 1, do not run optimality step in subgradient projection.
+        self.feasibility_recovery: int = 0
+
         self.memory: int = 20
         self.cut_deletion_criterion: str = "activity"
 

@@ -162,57 +162,66 @@ def run(problem_data, config):
         # Optimality Step (Subgradient Step)
         #
 
-        # Compute the objetive value and constraint violation of v.
-        eval_x = common.evaluate_solution(x, problem_data)
-        if np.max(eval_x.g) <= config.feas_tol:
-            ub = min(ub, eval_x.f)
-            best_ub = min(ub, best_ub)
+        if not config.feasibility_recovery:
+            # Compute the objetive value and constraint violation of v.
+            eval_x = common.evaluate_solution(x, problem_data)
+            if np.max(eval_x.g) <= config.feas_tol:
+                ub = min(ub, eval_x.f)
+                best_ub = min(ub, best_ub)
 
-        # TODO Add cuts from all the constraints.
-        if config.add_cuts_after_optimality_step:
-            most_viol_constr_index_x = np.argmax(eval_x.g)
-            if config.eval_lb_every > 0:
+            # TODO Add cuts from all the constraints.
+            if config.add_cuts_after_optimality_step:
+                most_viol_constr_index_x = np.argmax(eval_x.g)
+                if config.eval_lb_every > 0:
+                    common.add_cuts(
+                        config=config,
+                        linear_cuts=unreg_linear_cuts,
+                        lmi_cuts=unreg_lmi_cuts,
+                        constr_svec_coef=constr_svec_coefs[
+                            most_viol_constr_index_x
+                        ],
+                        constr_svec_offset=constr_svec_offset[
+                            most_viol_constr_index_x
+                        ],
+                        x=x,
+                        w=eval_x.eigenvalues[most_viol_constr_index_x],
+                        v=eval_x.eigenvectors[most_viol_constr_index_x],
+                        n_linear_cuts=n_unreg_linear_cuts,
+                        n_lmi_cuts=n_unreg_lmi_cuts,
+                    )
                 common.add_cuts(
                     config=config,
-                    linear_cuts=unreg_linear_cuts,
-                    lmi_cuts=unreg_lmi_cuts,
-                    constr_svec_coef=constr_svec_coefs[
-                        most_viol_constr_index_x
-                    ],
+                    linear_cuts=reg_linear_cuts,
+                    lmi_cuts=reg_lmi_cuts,
+                    constr_svec_coef=constr_svec_coefs[most_viol_constr_index_x],
                     constr_svec_offset=constr_svec_offset[
                         most_viol_constr_index_x
                     ],
                     x=x,
                     w=eval_x.eigenvalues[most_viol_constr_index_x],
                     v=eval_x.eigenvectors[most_viol_constr_index_x],
-                    n_linear_cuts=n_unreg_linear_cuts,
-                    n_lmi_cuts=n_unreg_lmi_cuts,
+                    n_linear_cuts=n_reg_linear_cuts,
+                    n_lmi_cuts=n_reg_lmi_cuts,
                 )
-            common.add_cuts(
-                config=config,
-                linear_cuts=reg_linear_cuts,
-                lmi_cuts=reg_lmi_cuts,
-                constr_svec_coef=constr_svec_coefs[most_viol_constr_index_x],
-                constr_svec_offset=constr_svec_offset[
-                    most_viol_constr_index_x
-                ],
-                x=x,
-                w=eval_x.eigenvalues[most_viol_constr_index_x],
-                v=eval_x.eigenvectors[most_viol_constr_index_x],
-                n_linear_cuts=n_reg_linear_cuts,
-                n_lmi_cuts=n_reg_lmi_cuts,
-            )
 
-        step_size = step_size_manager.step_size
-        v = x - step_size * objective_coef
-        if config.projection_after_optimality_step:
-            v = mip_solver_extensions.project(regularised_model, v)
+            step_size = step_size_manager.step_size
+            v = x - step_size * objective_coef
+            if config.projection_after_optimality_step:
+                v = mip_solver_extensions.project(regularised_model, v)
+
+        else:
+            v = x
+            step_size = 0
 
         #
         # Feasibility step (Subgradient Projection Step)
         #
 
         eval_v = common.evaluate_solution(v, problem_data)
+
+        if config.feasibility_recovery:
+            eval_x = eval_v
+
         most_viol_constr_index_v = np.argmax(eval_v.g)
         if np.max(eval_v.g) <= config.feas_tol:
             ub = min(ub, eval_v.f)
@@ -357,7 +366,11 @@ def run(problem_data, config):
             "solution",
             "lb",
         ]
-        if config.termination_criteria == "lb_and_solution":
+        if config.feasibility_recovery:
+            if np.max(eval_v.g) <= config.feas_tol:
+                solver_status = "solved"
+                break
+        elif config.termination_criteria == "lb_and_solution":
             if lb_closed and solution_found:
                 solver_status = "solved"
                 break
